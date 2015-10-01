@@ -1,0 +1,21 @@
+{
+  "name": "history-store",
+  "version": "0.0.0",
+  "description": "History Store reports",
+  "main": "history-store.js",
+  "scripts": {
+    "test": "./node_modules/mocha/bin/mocha --recursive --reporter spec",
+    "watch-test": "./node_modules/mocha/bin/mocha --watch --recursive --reporter spec"
+  },
+  "author": "jbg",
+  "license": "ISC",
+  "devDependencies": {
+    "chai": "^3.2.0",
+    "mocha": "^2.2.5"
+  },
+  "dependencies": {
+    "async": "^1.4.2",
+    "fs-extra": "^0.24.0",
+    "json.date-extensions": "^1.2.2"
+  }
+}
