@@ -5,7 +5,7 @@
 var should = require('chai').should(),
     fse = require('fs-extra'),
     path = require('path'),
-    historyserver = require('../history-store'),
+    store = require('../history-store'),
     storageRoot = '../tmp-history-store';
 
 describe('fs history store', function () {
@@ -15,7 +15,7 @@ describe('fs history store', function () {
     });
 
     it('can write and read one report', function (done) {
-        var hs = historyserver(storageRoot).report('MyReport'),
+        var hs = store(storageRoot).report('MyReport'),
             report = { date:  new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}};
 
         hs.put(report, function (err) {
@@ -36,7 +36,7 @@ describe('fs history store', function () {
     });
 
     it('can write and read one report with custom date (field)', function (done) {
-        var hs = historyserver(storageRoot).report('MyReport', 'creationdate'),
+        var hs = store(storageRoot).report('MyReport', 'creationdate'),
             report = { creationdate:  new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}};
 
         hs.put(report, function (err) {
@@ -58,7 +58,7 @@ describe('fs history store', function () {
 
 
     it('reads one report when other files than json', function (done) {
-        var hs = historyserver(storageRoot).report('MyReport'),
+        var hs = store(storageRoot).report('MyReport'),
             report = { date:  new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}};
 
         hs.put(report, function (err) {
@@ -79,7 +79,7 @@ describe('fs history store', function () {
     });
 
     it('callbacks with an error when getting bad json', function (done) {
-        var hs = historyserver(storageRoot).report('MyReport'),
+        var hs = store(storageRoot).report('MyReport'),
             report = { date:  new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}};
 
         hs.put(report, function (err) {
@@ -102,7 +102,7 @@ describe('fs history store', function () {
     });
 
     it('callbacks with an error when getting bad json and only first report should be sent', function (done) {
-        var hs = historyserver(storageRoot).report('MyReport'),
+        var hs = store(storageRoot).report('MyReport'),
             report = { date: new Date(), status: {sessionCount: 100, schemasCount: 10}};
 
         hs.put(report, function (err) {
@@ -124,7 +124,7 @@ describe('fs history store', function () {
     });
 
     it('emits an error when streaming bad json', function (done) {
-        var hs = historyserver(storageRoot).report('MyReport'),
+        var hs = store(storageRoot).report('MyReport'),
             report = { date:  new Date(), status: {sessionCount: 100, schemasCount: 10}},
             reportCount = 0,
             errors = 0;
@@ -157,7 +157,7 @@ describe('fs history store', function () {
     });
 
     it('can write and read several reports', function (done) {
-        var hs = historyserver(storageRoot).report('MyReport'),
+        var hs = store(storageRoot).report('MyReport'),
             report1 = { date: new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}},
             report2 = { date: new Date('1995-12-18T04:44:10'), status: {sessionCount: 100, schemasCount: 10}};
 
@@ -195,7 +195,7 @@ describe('fs history store', function () {
     });
 
     it('can stream one report', function (done) {
-        var hs = historyserver(storageRoot).report('MyReport'),
+        var hs = store(storageRoot).report('MyReport'),
             report = { date:  new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}},
             reportCount = 0;
 
@@ -223,7 +223,7 @@ describe('fs history store', function () {
     });
 
     it('can stream two reports', function (done) {
-        var hs = historyserver(storageRoot).report('MyReport'),
+        var hs = store(storageRoot).report('MyReport'),
             report1 = { date: new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}},
             report2 = { date: new Date('1995-12-18T04:44:10'), status: {sessionCount: 100, schemasCount: 10}},
             reports = [report1, report2],
