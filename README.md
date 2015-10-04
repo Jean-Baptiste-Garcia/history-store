@@ -8,7 +8,7 @@ This is a very simple file system storage not intended to support huge numbers o
 Installation
 ------------
 
-**Soon** To use with node:
+To use with node:
 
 ```bash
 $ npm install history-store
@@ -40,7 +40,7 @@ stream.on('end', function (err) {});
 Report can be any js object containing primitive types (Number / String / Date) with any array/object nesting. Report is JSON stringified on file system.
 
 ### Date identification
-Date of stored report needs to be known by the store. By default, date is expected to be found in ```report.date```. However, it is possible to define specific access to date.
+History store needs to know date of report. By default, date is expected to be found in ```report.date```. However, it is possible to define specific access to date.
 ```javascript
 // date identified by report.creationdate
 store('../history').report('MyReport', 'creationdate')
