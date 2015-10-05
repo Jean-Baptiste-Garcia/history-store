@@ -149,13 +149,19 @@ module.exports = function (sroot) {
         * Store report
         */
         function put(report, cb) {
-            var reportsPath = toPath(id);
+            var reportsPath = toPath(id),
+                date = dategetter(report);
+
+            if (typeof date === 'string') {
+                // this may happen when data to put comes from client side (rest post api call)
+                date = new Date(date);
+            }
             // it appeared that Date.now() resolution in ms, is not enough to avoid 2 different data saved in same file name
             // so nanoseconds are added just to avoid this situation
             // in unit tests you can have :
             // 1441216630351-612441275.json
             // 1441216630351-613168640.json
-            fs.writeFile(reportsPath + '/' + dategetter(report).getTime() + '-' + process.hrtime()[1] + '.json', JSON.stringify(report), cb);
+            fs.writeFile(reportsPath + '/' + date.getTime() + '-' + process.hrtime()[1] + '.json', JSON.stringify(report), cb);
         }
 
         /*

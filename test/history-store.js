@@ -35,6 +35,28 @@ describe('fs history store', function () {
         });
     });
 
+    it('handles string date', function (done) {
+        var hs = store(storageRoot).report('MyReport'),
+            report = { date: '1995-12-17T03:24:00', status: {sessionCount: 100, schemasCount: 10}};
+
+        hs.put(report, function (err) {
+            if (err) {
+                done(err);
+                return;
+            }
+
+            hs.get(function (err, reports) {
+                if (err) {
+                    done(err);
+                    return;
+                }
+                report.date = new Date(report.date);
+                reports.should.eql([report]);
+                done();
+            });
+        });
+    });
+
     it('can write and read one report with custom date (field)', function (done) {
         var hs = store(storageRoot).report('MyReport', 'creationdate'),
             report = { creationdate:  new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}};
