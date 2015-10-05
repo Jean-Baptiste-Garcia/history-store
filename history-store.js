@@ -192,12 +192,16 @@ module.exports = function (sroot) {
         //
         dategetter = makeDateGetter(customdate);
 
-        if (fse.mkdirsSync(root)) {
-            if ((process.env.NODE_ENV || 'development') !== 'development') {
-                console.log('History storaeg root is', root);
-            }
-        } else {
-            throw new Error('Failed to create history storage root at ' + root);
+
+        try {
+            fse.ensureDirSync(root);
+        } catch (error) {
+            console.log('Failed to create history storage root at ' + root);
+            throw error;
+        }
+
+        if ((process.env.NODE_ENV || 'development') !== 'development') {
+            console.log('History storage root is', root);
         }
 
         return {

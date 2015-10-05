@@ -260,5 +260,42 @@ describe('fs history store', function () {
         });
     });
 
+    it('works when storage folder already exist', function (done) {
+        var hs = store(storageRoot).report('MyReport'),
+            report = { date:  new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}};
+
+        hs.put(report, function (err) {
+            if (err) {
+                done(err);
+                return;
+            }
+
+            hs.get(function (err, reports) {
+                if (err) {
+                    done(err);
+                    return;
+                }
+                reports.should.eql([report]);
+
+                hs = store(storageRoot).report('MyReport'); // raised an exception
+
+                done();
+            });
+        });
+    });
+
+    it('raises an exception when storage folder cannot be created', function (done) {
+
+        try {
+            var hs = store('/*dsdqsd/').report('MyReport');
+            done(new Error('should have raised an exception'));
+        } catch (e) {
+            done();
+        }
+
+
+
+    });
+
 
 });
