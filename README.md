@@ -3,7 +3,7 @@ history-store
 historys-store is a server-side module used to store different versions of report.
 When used with [history-trend](https://github.com/Jean-Baptiste-Garcia/history-trend), it becomes possible to compute any trend of any report over time.
 
-This is a very simple file system storage not intended to support huge numbers of versions.
+This is a very simple persistent file system storage which is not intended to support huge numbers of versions.
 
 Installation
 ------------
