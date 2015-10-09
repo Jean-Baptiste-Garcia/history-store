@@ -132,5 +132,4 @@ describe('memory history store', function () {
             });
         });
     });
-
 });

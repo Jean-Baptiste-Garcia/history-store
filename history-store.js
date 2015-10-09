@@ -72,7 +72,6 @@ module.exports = function (sroot) {
         return idpath;
     }
 
-
     function readReportFile(filename, cb) {
         fs.readFile(filename, function (err, data) {
             try {
@@ -85,22 +84,35 @@ module.exports = function (sroot) {
 
     function jsonOnly(filename) {return path.extname(filename) === '.json'; }
 
-    function listOfReports(id, cb) {
+
+    function sinceStardate(startdate) {
+        if (!startdate) {
+            return function () {
+                return true;
+            };
+        }
+        return function (filename) {
+            return filename.localeCompare(startdate.getTime()) >= 0;
+        };
+    }
+
+    function listOfReports(cb, id, startdate) {
         var reportRoot = toPath(id);
         fs.readdir(reportRoot, function (err, filenames) {
             cb(err, err ? undefined :
                     filenames
                     .filter(jsonOnly)
                     .sort()
+                    .filter(sinceStardate(startdate)) // more efficient if splice on first index and with binarysearch
                     .map(function (filename) { return reportRoot + '/' + filename; }));
         });
     }
 
-
-    function ReportStream(id) {
+    function ReportStream(id, startdate) {
         Readable.call(this, {objectMode: true });
         this.index = 0;
         this.reportsId = id;
+        this.startdate = startdate;
     }
 
     util.inherits(ReportStream, Readable);
@@ -127,7 +139,7 @@ module.exports = function (sroot) {
     ReportStream.prototype._read = function () {
         var self = this;
         if (!this.files) {
-            listOfReports(this.reportsId, function (err, files) {
+            listOfReports(function (err, files) {
                 if (err) {
                     self.push(null);
                     return;
@@ -135,12 +147,11 @@ module.exports = function (sroot) {
 
                 self.files = files;
                 self.readReport();
-            });
+            }, this.reportsId, this.startdate);
             return;
         }
         self.readReport();
     };
-
 
     function ReportHistory(id, customdate) {
         var dategetter;
@@ -170,7 +181,7 @@ module.exports = function (sroot) {
         function get(cb) {
             var tasks;
 
-            listOfReports(id, function (err, files) {
+            listOfReports(function (err, files) {
                 if (err) {
                     cb(err);
                     return;
@@ -184,11 +195,11 @@ module.exports = function (sroot) {
                                 results
                         );
                 });
-            });
+            }, id);
         }
 
-        function stream() {
-            var s = new ReportStream(id);
+        function stream(startdate) {
+            var s = new ReportStream(id, startdate);
             s.customdate = customdate;
             return s;
         }
@@ -197,7 +208,6 @@ module.exports = function (sroot) {
         // Initialization
         //
         dategetter = makeDateGetter(customdate);
-
 
         try {
             fse.ensureDirSync(root);
