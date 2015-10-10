@@ -154,7 +154,7 @@ module.exports = function (sroot) {
     };
 
     function ReportHistory(id, customdate) {
-        var dategetter;
+        var dategetter = makeDateGetter(customdate);
 
         /*
         * Store report
@@ -205,7 +205,6 @@ module.exports = function (sroot) {
         //
         // Initialization
         //
-        dategetter = makeDateGetter(customdate);
 
         try {
             fse.ensureDirSync(root);
@@ -222,7 +221,8 @@ module.exports = function (sroot) {
             put: put,
             get: get,
             stream: stream,
-            customdate: customdate
+            customdate: customdate,
+            dategetter: dategetter
         };
     }
 
