@@ -20,6 +20,7 @@ describe('fs history store', function () {
             report = { date:  new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}};
 
         assert.isUndefined(hs.customdate);
+        hs.dategetter(report).should.equal(report.date);
         hs.put(report, function (err) {
             if (err) {
                 done(err);
@@ -37,7 +38,7 @@ describe('fs history store', function () {
         });
     });
 
-    it('handles string date', function (done) {
+    it('handles string date in report', function (done) {
         var hs = store(storageRoot).report('MyReport'),
             report = { date: '1995-12-17T03:24:00', status: {sessionCount: 100, schemasCount: 10}};
 
@@ -64,6 +65,7 @@ describe('fs history store', function () {
             report = { creationdate:  new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}};
 
         hs.customdate.should.eql('creationdate');
+        hs.dategetter(report).should.equal(report.creationdate);
         hs.put(report, function (err) {
             if (err) {
                 done(err);
