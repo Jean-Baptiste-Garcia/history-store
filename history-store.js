@@ -103,7 +103,7 @@ module.exports = function (sroot) {
                     filenames
                     .filter(jsonOnly)
                     .sort()
-                    .filter(sinceStardate(startdate)) // more efficient if splice on first index and with binarysearch
+                    .filter(sinceStardate(startdate)) // FIXME would be much more efficient if splice on first index and with binarysearch / dichotomy
                     .map(function (filename) { return reportRoot + '/' + filename; }));
         });
     }
@@ -199,9 +199,7 @@ module.exports = function (sroot) {
         }
 
         function stream(startdate) {
-            var s = new ReportStream(id, startdate);
-            s.customdate = customdate;
-            return s;
+            return new ReportStream(id, startdate);
         }
 
         //
@@ -223,7 +221,8 @@ module.exports = function (sroot) {
         return {
             put: put,
             get: get,
-            stream: stream
+            stream: stream,
+            customdate: customdate
         };
     }
 

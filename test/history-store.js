@@ -3,6 +3,7 @@
 'use strict';
 
 var should = require('chai').should(),
+    assert = require('chai').assert,
     fse = require('fs-extra'),
     path = require('path'),
     store = require('../history-store'),
@@ -18,6 +19,7 @@ describe('fs history store', function () {
         var hs = store(storageRoot).report('MyReport'),
             report = { date:  new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}};
 
+        assert.isUndefined(hs.customdate);
         hs.put(report, function (err) {
             if (err) {
                 done(err);
@@ -61,6 +63,7 @@ describe('fs history store', function () {
         var hs = store(storageRoot).report('MyReport', 'creationdate'),
             report = { creationdate:  new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}};
 
+        hs.customdate.should.eql('creationdate');
         hs.put(report, function (err) {
             if (err) {
                 done(err);
@@ -79,7 +82,7 @@ describe('fs history store', function () {
     });
 
 
-    it('reads one report when other files than json', function (done) {
+    it('filters other files than json', function (done) {
         var hs = store(storageRoot).report('MyReport'),
             report = { date:  new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}};
 
@@ -178,7 +181,7 @@ describe('fs history store', function () {
         });
     });
 
-    it('can write and read several reports', function (done) {
+    it('writes and reads several reports', function (done) {
         var hs = store(storageRoot).report('MyReport'),
             report1 = { date: new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}},
             report2 = { date: new Date('1995-12-18T04:44:10'), status: {sessionCount: 100, schemasCount: 10}};
@@ -216,7 +219,7 @@ describe('fs history store', function () {
         });
     });
 
-    it('can stream one report', function (done) {
+    it('streams one report', function (done) {
         var hs = store(storageRoot).report('MyReport'),
             report = { date:  new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}},
             reportCount = 0;
@@ -244,7 +247,7 @@ describe('fs history store', function () {
         });
     });
 
-    it('can stream two reports', function (done) {
+    it('streams two reports', function (done) {
         var hs = store(storageRoot).report('MyReport'),
             report1 = { date: new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}},
             report2 = { date: new Date('1995-12-18T04:44:10'), status: {sessionCount: 100, schemasCount: 10}},
