@@ -55,6 +55,8 @@ module.exports = function (sroot) {
         }
     }
 
+
+    // Should be stateless if we enforce one ReportHistory / reportid
     function toPath(id) {
         var idpath = id_path[id];
         if (!idpath) {
@@ -84,7 +86,6 @@ module.exports = function (sroot) {
 
     function jsonOnly(filename) {return path.extname(filename) === '.json'; }
 
-
     function sinceStardate(startdate) {
         if (!startdate) {
             return function () {
@@ -110,9 +111,10 @@ module.exports = function (sroot) {
 
     function ReportStream(id, startdate) {
         Readable.call(this, {objectMode: true });
-        this.index = 0;
         this.reportsId = id;
         this.startdate = startdate;
+        this.reportIndex = 0; // current index of report
+        this.reports = undefined;// list of reports filename
     }
 
     util.inherits(ReportStream, Readable);
@@ -120,32 +122,32 @@ module.exports = function (sroot) {
     ReportStream.prototype.readReport = function () {
         var self = this;
 
-        if (this.index >= this.files.length) {
+        if (this.reportIndex >= this.reports.length) {
             this.push(null);
             return;
         }
 
-        readReportFile(this.files[this.index], function (err, report) {
+        readReportFile(this.reports[this.reportIndex], function (err, report) {
             if (err) {
                 self.emit('error', 'Can\'t read report ' + err);
                 self.push(null);
                 return;
             }
-            self.index += 1;
+            self.reportIndex += 1;
             self.push(report);
         });
     };
 
     ReportStream.prototype._read = function () {
         var self = this;
-        if (!this.files) {
-            listOfReports(function (err, files) {
+        if (!this.reports) {
+            listOfReports(function (err, reports) {
                 if (err) {
                     self.push(null);
                     return;
                 }
 
-                self.files = files;
+                self.reports = reports;
                 self.readReport();
             }, this.reportsId, this.startdate);
             return;
@@ -154,14 +156,14 @@ module.exports = function (sroot) {
     };
 
     function ReportHistory(id, customdate) {
-        var dategetter = makeDateGetter(customdate);
+        var dategetter = makeDateGetter(customdate),
+            reportsPath;
 
         /*
         * Store report
         */
         function put(report, cb) {
-            var reportsPath = toPath(id),
-                date = dategetter(report);
+            var date = dategetter(report);
 
             if (typeof date === 'string') {
                 // this may happen when data to put comes from client side (rest post api call)
@@ -179,28 +181,21 @@ module.exports = function (sroot) {
         *  Read all reports and return them in an array
         */
         function get(cb) {
-            var tasks;
+            listOfReports(function (err, reportfiles) {
+                if (err) { return cb(err); }
 
-            listOfReports(function (err, files) {
-                if (err) {
-                    cb(err);
-                    return;
-                }
-
-                tasks = files.map(function (file) {return function (asynccallback) { readReportFile(file, asynccallback); }; });
+                var readTasks = reportfiles.map(function (file) {return function (asynccallback) { readReportFile(file, asynccallback); }; });
                 // Execute tasks
-                async.series(tasks, function (err, results) {
+                async.series(readTasks, function (err, reports) {
                     cb(err, err ?
-                                results.filter(function (r) {return r; }) : // when error undefined is pushed to results
-                                results
+                                reports.filter(function (r) {return r; }) : // when error undefined is pushed to results
+                                reports
                         );
                 });
             }, id);
         }
 
-        function stream(startdate) {
-            return new ReportStream(id, startdate);
-        }
+        function stream(startdate) { return new ReportStream(id, startdate); }
 
         //
         // Initialization
@@ -208,6 +203,7 @@ module.exports = function (sroot) {
 
         try {
             fse.ensureDirSync(root);
+            reportsPath = toPath(id);
         } catch (error) {
             console.log('Failed to create history storage root at ' + root);
             throw error;
