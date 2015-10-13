@@ -8,10 +8,11 @@ module.exports = function (sroot) {
         path = require('path'),
         util = require('util'),
         async = require('async'),
-        root = path.resolve(sroot),
-        id_path = {};
+        root = path.resolve(sroot);
 
     require('json.date-extensions');
+
+    function alwaysTrue() {return true; }
 
     // returns a function to access value for given a path
     // path like 'key1.key2.key3' --> obj[key1][key2][key3]
@@ -55,20 +56,14 @@ module.exports = function (sroot) {
         }
     }
 
-
-    // Should be stateless if we enforce one ReportHistory / reportid
     function toPath(id) {
-        var idpath = id_path[id];
-        if (!idpath) {
-            idpath = root + '/' + id;
-            id_path[id] = idpath;
-            try {
-                fs.mkdirSync(idpath);
-            } catch (err) {
-                if (err.code !== 'EEXIST') {
-                    console.log('failed to create ', idpath, err);
-                    throw err;
-                }
+        var idpath = root + '/' + id;
+        try {
+            fs.mkdirSync(idpath);
+        } catch (err) {
+            if (err.code !== 'EEXIST') {
+                console.log('Failed to create ', idpath, err);
+                throw err;
             }
         }
         return idpath;
@@ -87,34 +82,31 @@ module.exports = function (sroot) {
     function jsonOnly(filename) {return path.extname(filename) === '.json'; }
 
     function sinceStardate(startdate) {
-        if (!startdate) {
-            return function () {
-                return true;
-            };
-        }
-        return function (filename) {
-            return filename.localeCompare(startdate.getTime()) >= 0;
-        };
+        return startdate ?
+                function (filename) {return filename.localeCompare(startdate.getTime()) >= 0; } :
+                alwaysTrue;
     }
 
-    function listOfReports(cb, id, startdate) {
-        var reportRoot = toPath(id);
+    function listOfReports(cb, reportRoot, startdate) {
         fs.readdir(reportRoot, function (err, filenames) {
             cb(err, err ? undefined :
                     filenames
                     .filter(jsonOnly)
                     .sort()
                     .filter(sinceStardate(startdate)) // FIXME would be much more efficient if splice on first index and with binarysearch / dichotomy
+                    //.splice(dateIndex(startdate))
                     .map(function (filename) { return reportRoot + '/' + filename; }));
         });
     }
 
-    function ReportStream(id, startdate) {
+    // Stream
+
+    function ReportStream(reportRoot, startdate) {
         Readable.call(this, {objectMode: true });
-        this.reportsId = id;
+        this.reportRoot = reportRoot;
         this.startdate = startdate;
         this.reportIndex = 0; // current index of report
-        this.reports = undefined;// list of reports filename
+        this.reportfiles = undefined;// list of reports filename
     }
 
     util.inherits(ReportStream, Readable);
@@ -122,16 +114,14 @@ module.exports = function (sroot) {
     ReportStream.prototype.readReport = function () {
         var self = this;
 
-        if (this.reportIndex >= this.reports.length) {
-            this.push(null);
-            return;
+        if (this.reportIndex >= this.reportfiles.length) {
+            return this.push(null);
         }
 
-        readReportFile(this.reports[this.reportIndex], function (err, report) {
+        readReportFile(this.reportfiles[this.reportIndex], function (err, report) {
             if (err) {
                 self.emit('error', 'Can\'t read report ' + err);
-                self.push(null);
-                return;
+                return self.push(null);
             }
             self.reportIndex += 1;
             self.push(report);
@@ -141,15 +131,12 @@ module.exports = function (sroot) {
     ReportStream.prototype._read = function () {
         var self = this;
         if (!this.reports) {
-            listOfReports(function (err, reports) {
-                if (err) {
-                    self.push(null);
-                    return;
-                }
+            listOfReports(function (err, reportfiles) {
+                if (err) { return self.push(null); }
 
-                self.reports = reports;
+                self.reportfiles = reportfiles;
                 self.readReport();
-            }, this.reportsId, this.startdate);
+            }, this.reportRoot, this.startdate);
             return;
         }
         self.readReport();
@@ -157,7 +144,7 @@ module.exports = function (sroot) {
 
     function ReportHistory(id, customdate) {
         var dategetter = makeDateGetter(customdate),
-            reportsPath;
+            reportRoot;
 
         /*
         * Store report
@@ -174,7 +161,7 @@ module.exports = function (sroot) {
             // in unit tests you can have :
             // 1441216630351-612441275.json
             // 1441216630351-613168640.json
-            fs.writeFile(reportsPath + '/' + date.getTime() + '-' + process.hrtime()[1] + '.json', JSON.stringify(report), cb);
+            fs.writeFile(reportRoot + '/' + date.getTime() + '-' + process.hrtime()[1] + '.json', JSON.stringify(report), cb);
         }
 
         /*
@@ -192,10 +179,10 @@ module.exports = function (sroot) {
                                 reports
                         );
                 });
-            }, id);
+            }, reportRoot);
         }
 
-        function stream(startdate) { return new ReportStream(id, startdate); }
+        function stream(startdate) { return new ReportStream(reportRoot, startdate); }
 
         //
         // Initialization
@@ -203,7 +190,7 @@ module.exports = function (sroot) {
 
         try {
             fse.ensureDirSync(root);
-            reportsPath = toPath(id);
+            reportRoot = toPath(id);
         } catch (error) {
             console.log('Failed to create history storage root at ' + root);
             throw error;
