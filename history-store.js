@@ -112,13 +112,14 @@ module.exports = function (sroot) {
     util.inherits(ReportStream, Readable);
 
     ReportStream.prototype.readReport = function () {
-        var self = this;
+        var self = this,
+            reportfile;
 
         if (this.reportIndex >= this.reportfiles.length) {
             return this.push(null);
         }
-
-        readReportFile(this.reportfiles[this.reportIndex], function (err, report) {
+        reportfile = this.reportfiles[this.reportIndex];
+        readReportFile(reportfile, function (err, report) {
             if (err) {
                 self.emit('error', 'Can\'t read report ' + err);
                 return self.push(null);
