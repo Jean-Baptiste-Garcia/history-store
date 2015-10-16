@@ -8,7 +8,8 @@ module.exports = function (sroot) {
         path = require('path'),
         util = require('util'),
         async = require('async'),
-        root = path.resolve(sroot);
+        root = path.resolve(sroot),
+        memcache = require('./modules/cache/cache');
 
     require('json.date-extensions');
 
@@ -145,7 +146,8 @@ module.exports = function (sroot) {
 
     function ReportHistory(id, customdate) {
         var dategetter = makeDateGetter(customdate),
-            reportRoot;
+            reportRoot,
+            store;
 
         /*
         * Store report
@@ -185,6 +187,8 @@ module.exports = function (sroot) {
 
         function stream(startdate) { return new ReportStream(reportRoot, startdate); }
 
+        function cache(q) { return memcache(q, store); }
+
         //
         // Initialization
         //
@@ -201,13 +205,16 @@ module.exports = function (sroot) {
             console.log('History storage root is', root);
         }
 
-        return {
+        store = {
             put: put,
             get: get,
             stream: stream,
             customdate: customdate,
-            dategetter: dategetter
+            dategetter: dategetter,
+            cache: cache
         };
+
+        return store;
     }
 
     return {
