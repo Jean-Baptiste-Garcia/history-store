@@ -4,9 +4,14 @@
 
 /*jslint node: true */
 'use strict';
-module.exports = function cache(query, store) {
-    var trends,
-        lastdate;
+module.exports = function cache(query, store, initvalue) {
+    var trends = initvalue;
+
+    function lastdate() {
+        return trends ?
+                store.dategetter(trends[trends.length - 1]) :
+                undefined;
+    }
 
     function append(delta) {
         if (!trends) {return delta; }
@@ -17,10 +22,9 @@ module.exports = function cache(query, store) {
     function computetrends(cb) {
         function cachecb(err, delta) {
             trends = append(delta);
-            lastdate = store.dategetter(trends[trends.length - 1]);
             cb(err, trends);
         }
-        query.fromStore(store, cachecb, lastdate);
+        query.fromStore(store, cachecb, lastdate());
     }
     return {
         trends: computetrends

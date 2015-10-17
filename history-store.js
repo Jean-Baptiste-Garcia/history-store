@@ -9,7 +9,8 @@ module.exports = function (sroot) {
         util = require('util'),
         async = require('async'),
         root = path.resolve(sroot),
-        memcache = require('./modules/cache/cache');
+        memcache = require('./modules/cache/cache'),
+        fscache = require('./modules/cache/fscache');
 
     require('json.date-extensions');
 
@@ -187,7 +188,8 @@ module.exports = function (sroot) {
 
         function stream(startdate) { return new ReportStream(reportRoot, startdate); }
 
-        function cache(q) { return memcache(q, store); }
+        function cache(q, initvalue) { return memcache(q, store, initvalue); }
+        function fsfscache(q) { return fscache(q, store); }
 
         //
         // Initialization
@@ -211,7 +213,9 @@ module.exports = function (sroot) {
             stream: stream,
             customdate: customdate,
             dategetter: dategetter,
-            cache: cache
+            cache: cache,
+            fscache: fsfscache,
+            folder: reportRoot
         };
 
         return store;
