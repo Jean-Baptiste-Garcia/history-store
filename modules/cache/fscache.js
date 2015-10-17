@@ -1,5 +1,6 @@
 /**
- cache trends of a query on store onto filesystem
+ cache trends of a query onto filesystem
+ use a memcache to compute real trends and store to filesytem when needed
 */
 
 /*jslint node: true */
@@ -13,12 +14,11 @@ module.exports = function fscache(query, store) {
         cachefile;
 
     function computetrends(cb) {
-        function fscb(err, trends) {
-            if (err) {
-                return cb(err);
-            }
-            if (trends.length !== trendslength) {
 
+        function memcachecb(err, trends) {
+            if (err) {return cb(err); }
+            if (trends.length !== trendslength) {
+                // cache file needs to be updated
                 return fse.writeFile(cachefile, JSON.stringify(trends), function (err) {
                     if (!err) {trendslength = trends.length; }
                     cb(undefined, trends);
@@ -28,7 +28,7 @@ module.exports = function fscache(query, store) {
         }
 
         if (!memcache) {
-
+            // Initialization
             try {
                 fse.ensureDirSync(cachedfolder);
                 cachefile = cachedfolder + '/trends.json';
@@ -36,25 +36,20 @@ module.exports = function fscache(query, store) {
                 console.log('Failed to create query cache at ' + cachedfolder);
                 throw error;
             }
-
+            // read cache file
             fse.readFile(cachefile, function (err, data) {
-                var initvalue;
                 try {
-                    //console.log(err, data);
-                    initvalue = data ? JSON.parseWithDate(data) : undefined;
+                    var initvalue = data ? JSON.parseWithDate(data) : undefined;
                     trendslength = initvalue ? initvalue.length : 0;
                     memcache = store.cache(query, initvalue);
-                    memcache.trends(fscb);
+                    memcache.trends(memcachecb);
                 } catch (e) {
                     cb(e);
                 }
-
             });
             return;
         }
-        console.log(cachedfolder);
-        memcache.trends(fscb);
-
+        memcache.trends(memcachecb);
     }
 
     return {
