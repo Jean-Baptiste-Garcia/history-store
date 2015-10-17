@@ -31,7 +31,7 @@ describe('mem cached history-trend', function () {
             }), done);
         });
 
-        it('computes timeserie and has same trends when store has not changed', function (done) {
+        it('computes timeserie and returns same trends when store has not changed', function (done) {
             var q = hs.cache(H.timeserie('status.sessionCount')),
                 trends1;
 
@@ -52,7 +52,7 @@ describe('mem cached history-trend', function () {
             });
         });
 
-        it('computes timeserie when new report added', function (done) {
+        it('updates itself when new report added', function (done) {
             var q = hs.cache(H.timeserie('status.sessionCount'));
 
             q.trends(function (err, trends) {
@@ -159,26 +159,41 @@ describe('fs cached history-trend', function () {
 
         it('loads from cache', function (done) {
             var q = hs.fscache(H.timeserie('status.sessionCount')),
-                trends1;
+                stat1;
 
             fse.ensureDirSync(cachefolder);
+            // data in cache is different from reports store
+            // so it is possible to check that return trends comes from cache and not from store.
             fse.writeFileSync(cachefile, JSON.stringify([
                 { date: new Date('1995-12-17T03:24:00'), sessionCount: 200},
                 { date: new Date('1995-12-18T04:44:10'), sessionCount: 201},
                 { date: new Date('1995-12-19T05:44:10'), sessionCount: 202}
             ]));
+            stat1 = fse.statSync(cachefile);
 
             q.trends(function (err, trends) {
                 if (err) { return done(err); }
-                var cacheddata = fse.readFileSync(cachefile),
-                    stat = fse.statSync(cachefile);
-                //console.log(stat);
+                fse.statSync(cachefile).should.eql(stat1);
                 trends.should.eql([
                     { date: new Date('1995-12-17T03:24:00'), sessionCount: 200},
                     { date: new Date('1995-12-18T04:44:10'), sessionCount: 201},
                     { date: new Date('1995-12-19T05:44:10'), sessionCount: 202}
                 ]);
-                done();
+                hs.put({date: new Date('1995-12-20T05:44:10'), status: {sessionCount: 110, schemasCount: 20}}, function (err) {
+                    if (err) {return done(err); }
+                    q.trends(function (err2, trends2) {
+                        if (err2) { return done(err2); }
+                        trends2.should.eql([
+                            {date: new Date('1995-12-17T03:24:00'), sessionCount: 200},
+                            {date: new Date('1995-12-18T04:44:10'), sessionCount: 201},
+                            {date: new Date('1995-12-19T05:44:10'), sessionCount: 202},
+                            {date: new Date('1995-12-20T05:44:10'), sessionCount: 110}
+                        ]);
+                        fse.statSync(cachefile).should.not.eql(stat1);
+                        //console.log(fse.statSync(cachefile));
+                        done();
+                    });
+                });
             });
         });
 
