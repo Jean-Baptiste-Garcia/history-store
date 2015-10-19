@@ -2,17 +2,12 @@
 
 module.exports = function (sroot) {
     'use strict';
-    var Readable = require('stream').Readable,
-        fs = require('fs'),
-        fse = require('fs-extra'),
+    var fse = require('fs-extra'),
         path = require('path'),
-        util = require('util'),
-        async = require('async'),
-        root = path.resolve(sroot),
+        Stream = require('./modules/stream/stream'),
         memcache = require('./modules/cache/cache'),
-        fscache = require('./modules/cache/fscache');
-
-    require('json.date-extensions');
+        fscache = require('./modules/cache/fscache'),
+        root = path.resolve(sroot);
 
     function alwaysTrue() {return true; }
 
@@ -61,7 +56,7 @@ module.exports = function (sroot) {
     function toPath(id) {
         var idpath = root + '/' + id;
         try {
-            fs.mkdirSync(idpath);
+            fse.mkdirSync(idpath);
         } catch (err) {
             if (err.code !== 'EEXIST') {
                 console.log('Failed to create ', idpath, err);
@@ -69,16 +64,6 @@ module.exports = function (sroot) {
             }
         }
         return idpath;
-    }
-
-    function readReportFile(filename, cb) {
-        fs.readFile(filename, function (err, data) {
-            try {
-                cb(err, err ? undefined : JSON.parseWithDate(data));
-            } catch (e) {
-                cb(e);
-            }
-        });
     }
 
     function jsonOnly(filename) {return path.extname(filename) === '.json'; }
@@ -89,66 +74,24 @@ module.exports = function (sroot) {
                 alwaysTrue;
     }
 
-    function listOfReports(cb, reportRoot, startdate) {
-        fs.readdir(reportRoot, function (err, filenames) {
-            cb(err, err ? undefined :
-                    filenames
-                    .filter(jsonOnly)
-                    .sort()
-                    .filter(sinceStardate(startdate)) // FIXME would be much more efficient if splice on first index and with binarysearch / dichotomy
-                    //.splice(dateIndex(startdate))
-                    .map(function (filename) { return reportRoot + '/' + filename; }));
-        });
-    }
-
-    // Stream
-
-    function ReportStream(reportRoot, startdate) {
-        Readable.call(this, {objectMode: true });
-        this.reportRoot = reportRoot;
-        this.startdate = startdate;
-        this.reportIndex = 0; // current index of report
-        this.reportfiles = undefined;// list of reports filename
-    }
-
-    util.inherits(ReportStream, Readable);
-
-    ReportStream.prototype.readReport = function () {
-        var self = this,
-            reportfile;
-
-        if (this.reportIndex >= this.reportfiles.length) {
-            return this.push(null);
-        }
-        reportfile = this.reportfiles[this.reportIndex];
-        readReportFile(reportfile, function (err, report) {
-            if (err) {
-                self.emit('error', 'Can\'t read report ' + err);
-                return self.push(null);
-            }
-            self.reportIndex += 1;
-            self.push(report);
-        });
-    };
-
-    ReportStream.prototype._read = function () {
-        var self = this;
-        if (!this.reports) {
-            listOfReports(function (err, reportfiles) {
-                if (err) { return self.push(null); }
-
-                self.reportfiles = reportfiles;
-                self.readReport();
-            }, this.reportRoot, this.startdate);
-            return;
-        }
-        self.readReport();
-    };
-
     function ReportHistory(id, customdate) {
         var dategetter = makeDateGetter(customdate),
             reportRoot,
             store;
+
+        function listreports(startdate) {
+            return function (cb) {
+                fse.readdir(reportRoot, function (err, filenames) {
+                    cb(err, err ? undefined :
+                            filenames
+                            .filter(jsonOnly)
+                            .sort()
+                            .filter(sinceStardate(startdate)) // FIXME would be much more efficient if splice on first index and with binarysearch / dichotomy
+                            //.splice(dateIndex(startdate))
+                            .map(function (filename) { return reportRoot + '/' + filename; }));
+                });
+            };
+        }
 
         /*
         * Store report
@@ -165,30 +108,31 @@ module.exports = function (sroot) {
             // in unit tests you can have :
             // 1441216630351-612441275.json
             // 1441216630351-613168640.json
-            fs.writeFile(reportRoot + '/' + date.getTime() + '-' + process.hrtime()[1] + '.json', JSON.stringify(report), cb);
+            fse.writeFile(reportRoot + '/' + date.getTime() + '-' + process.hrtime()[1] + '.json', JSON.stringify(report), cb);
         }
+
+        function stream(startdate) { return new Stream(listreports(startdate)); }
 
         /*
         *  Read all reports and return them in an array
         */
         function get(cb) {
-            listOfReports(function (err, reportfiles) {
-                if (err) { return cb(err); }
+            var reports = [],
+                lasterror,
+                reportstream = stream();
+            reportstream.on('data',  function acc(report) {reports.push(report); });
 
-                var readTasks = reportfiles.map(function (file) {return function (asynccallback) { readReportFile(file, asynccallback); }; });
-                // Execute tasks
-                async.series(readTasks, function (err, reports) {
-                    cb(err, err ?
-                                reports.filter(function (r) {return r; }) : // when error undefined is pushed to results
-                                reports
-                        );
-                });
-            }, reportRoot);
+            reportstream.on('error', function (err) {lasterror = err; });
+
+            reportstream.on('end', function () {
+                cb(lasterror, lasterror ?
+                        reports.filter(function (r) {return r; }) : // when error undefined is pushed to results :
+                        reports);
+            });
         }
 
-        function stream(startdate) { return new ReportStream(reportRoot, startdate); }
-
         function cache(q, initvalue) { return memcache(q, store, initvalue); }
+
         function fsfscache(q) { return fscache(q, store); }
 
         //
@@ -224,5 +168,4 @@ module.exports = function (sroot) {
     return {
         report : ReportHistory
     };
-
 };
