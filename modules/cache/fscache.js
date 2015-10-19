@@ -41,7 +41,7 @@ module.exports = function fscache(query, store) {
                 try {
                     var initvalue = data ? JSON.parseWithDate(data) : undefined;
                     trendslength = initvalue ? initvalue.length : 0;
-                    memcache = store.cache(query, initvalue);
+                    memcache = store.memcache(query, initvalue);
                     memcache.trends(memcachecb);
                 } catch (e) {
                     cb(e);

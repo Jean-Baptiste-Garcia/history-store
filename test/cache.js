@@ -32,7 +32,7 @@ describe('mem cached history-trend', function () {
         });
 
         it('computes timeserie and returns same trends when store has not changed', function (done) {
-            var q = hs.cache(H.timeserie('status.sessionCount')),
+            var q = hs.memcache(H.timeserie('status.sessionCount')),
                 trends1;
 
             q.trends(function (err, trends) {
@@ -53,7 +53,7 @@ describe('mem cached history-trend', function () {
         });
 
         it('updates itself when new report added', function (done) {
-            var q = hs.cache(H.timeserie('status.sessionCount'));
+            var q = hs.memcache(H.timeserie('status.sessionCount'));
 
             q.trends(function (err, trends) {
                 if (err) {return done(err); }
@@ -104,7 +104,7 @@ describe('fs cached history-trend', function () {
 
 
         it('writes to cache and is not changed when queried again', function (done) {
-            var q = hs.fscache(H.timeserie('status.sessionCount')),
+            var q = hs.cache(H.timeserie('status.sessionCount')),
                 trends1;
 
             q.trends(function (err, trends) {
@@ -126,7 +126,7 @@ describe('fs cached history-trend', function () {
         });
 
         it('updates cache after put', function (done) {
-            var q = hs.fscache(H.timeserie('status.sessionCount')),
+            var q = hs.cache(H.timeserie('status.sessionCount')),
                 trends1;
 
             q.trends(function (err, trends) {
@@ -158,7 +158,7 @@ describe('fs cached history-trend', function () {
         });
 
         it('loads from cache', function (done) {
-            var q = hs.fscache(H.timeserie('status.sessionCount')),
+            var q = hs.cache(H.timeserie('status.sessionCount')),
                 stat1;
 
             fse.ensureDirSync(cachefolder);

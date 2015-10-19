@@ -5,7 +5,7 @@ module.exports = function (sroot) {
     var fse = require('fs-extra'),
         path = require('path'),
         Stream = require('./modules/stream/stream'),
-        memcache = require('./modules/cache/cache'),
+        memcache = require('./modules/cache/memcache'),
         fscache = require('./modules/cache/fscache'),
         root = path.resolve(sroot);
 
@@ -131,9 +131,9 @@ module.exports = function (sroot) {
             });
         }
 
-        function cache(q, initvalue) { return memcache(q, store, initvalue); }
+        function memorycache(q, initvalue) { return memcache(q, store, initvalue); }
 
-        function fsfscache(q) { return fscache(q, store); }
+        function filesystemcache(q) { return fscache(q, store); }
 
         //
         // Initialization
@@ -157,8 +157,8 @@ module.exports = function (sroot) {
             stream: stream,
             customdate: customdate,
             dategetter: dategetter,
-            cache: cache,
-            fscache: fsfscache,
+            memcache: memorycache,
+            cache: filesystemcache,
             folder: reportRoot
         };
 
