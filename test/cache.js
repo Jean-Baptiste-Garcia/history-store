@@ -1,5 +1,5 @@
 /*jslint node: true*/
-/*global describe: true, it: true, beforeEach: true */
+/*global describe: true, it: true, beforeEach: true, afterEach: true */
 'use strict';
 var should = require('chai').should(),
     assert = require('chai').assert,
@@ -17,7 +17,7 @@ describe('mem cached history-trend', function () {
 
         beforeEach(function startAndPopulateServer(done) {
             fse.removeSync(path.resolve(storageRoot));
-            hs = historystore(storageRoot).report('MyServer');
+            hs = historystore(storageRoot).open('MyServer');
 
             var reports = [
                     { date: new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}},
@@ -29,6 +29,10 @@ describe('mem cached history-trend', function () {
                     hs.put(report, callback);
                 };
             }), done);
+        });
+
+        afterEach(function () {
+            hs.close();
         });
 
         it('computes timeserie and returns same trends when store has not changed', function (done) {
@@ -85,7 +89,7 @@ describe('fs cached history-trend', function () {
 
         beforeEach(function startAndPopulateServer(done) {
             fse.removeSync(path.resolve(storageRoot));
-            hs = historystore(storageRoot).report('MyServer');
+            hs = historystore(storageRoot).open('MyServer');
 
             var reports = [
                     { date: new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}},
@@ -97,6 +101,10 @@ describe('fs cached history-trend', function () {
                     hs.put(report, callback);
                 };
             }), done);
+        });
+
+        afterEach(function () {
+            hs.close();
         });
 
         // with empty cache and put then read that cache is correctly updated

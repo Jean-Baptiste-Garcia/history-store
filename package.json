@@ -1,29 +1,30 @@
 {
-    "name": "history-store",
-    "version": "0.1.4",
-    "description": "Store history reports",
-    "main": "history-store.js",
-    "scripts": {
-        "test": "./node_modules/mocha/bin/mocha --recursive --reporter spec",
-        "watch-test": "./node_modules/mocha/bin/mocha --watch --recursive --reporter spec"
-    },
-    "repository": {
-        "type": "git",
-        "url": "git://github.com/Jean-Baptiste-Garcia/history-store.git"
-    },
-    "keywords": [
-        "history",
-        "analytics"
-    ],
-    "author": "jbg",
-    "license": "ISC",
-    "devDependencies": {
-        "chai": "^3.2.0",
-        "mocha": "^2.2.5"
-    },
-    "dependencies": {
-        "async": "^1.4.2",
-        "fs-extra": "^0.24.0",
-        "json.date-extensions": "^1.2.2"
-    }
+  "name": "history-store",
+  "version": "0.2.0",
+  "description": "Store history reports",
+  "main": "history-store.js",
+  "scripts": {
+    "test": "./node_modules/mocha/bin/mocha --recursive --reporter spec",
+    "watch-test": "./node_modules/mocha/bin/mocha --watch --recursive --reporter spec"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/Jean-Baptiste-Garcia/history-store.git"
+  },
+  "keywords": [
+    "history",
+    "analytics"
+  ],
+  "author": "jbg",
+  "license": "ISC",
+  "devDependencies": {
+    "chai": "^3.2.0",
+    "mocha": "^2.2.5",
+    "async": "^1.4.2"
+  },
+  "dependencies": {
+    "binary-search": "^1.2.0",
+    "fs-extra": "^0.24.0",
+    "json.date-extensions": "^1.2.2"
+  }
 }

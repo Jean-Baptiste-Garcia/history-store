@@ -1,5 +1,5 @@
 /*jslint node: true*/
-/*global describe: true, it: true, beforeEach: true */
+/*global describe: true, it: true, beforeEach: true, afterEach: true */
 'use strict';
 
 var should = require('chai').should(),
@@ -15,152 +15,123 @@ describe('fs history store', function () {
         fse.removeSync(path.resolve(storageRoot));
     });
 
+    function end(hs, done, err) {
+        hs.close();
+        done(err);
+    }
+
     it('can write and read one report', function (done) {
-        var hs = store(storageRoot).report('MyReport'),
+
+        var hs = store(storageRoot).open('MyReport'),
             report = { date:  new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}};
 
         assert.isUndefined(hs.customdate);
         hs.dategetter(report).should.equal(report.date);
         hs.put(report, function (err) {
-            if (err) {
-                done(err);
-                return;
-            }
+            if (err) {return end(hs, done, err); }
 
             hs.get(function (err, reports) {
-                if (err) {
-                    done(err);
-                    return;
-                }
+                if (err) {return end(hs, done, err); }
                 reports.should.eql([report]);
-                done();
+                end(hs, done);
             });
         });
     });
 
     it('handles string date in report', function (done) {
-        var hs = store(storageRoot).report('MyReport'),
+        var hs = store(storageRoot).open('MyReport'),
             report = { date: '1995-12-17T03:24:00', status: {sessionCount: 100, schemasCount: 10}};
 
         hs.put(report, function (err) {
-            if (err) {
-                done(err);
-                return;
-            }
+            if (err) {return end(hs, done, err); }
 
             hs.get(function (err, reports) {
-                if (err) {
-                    done(err);
-                    return;
-                }
+                if (err) {return end(hs, done, err); }
                 report.date = new Date(report.date);
                 reports.should.eql([report]);
-                done();
+                end(hs, done);
             });
         });
     });
 
     it('can write and read one report with custom date (field)', function (done) {
-        var hs = store(storageRoot).report('MyReport', 'creationdate'),
+        var hs = store(storageRoot).open('MyReport', 'creationdate'),
             report = { creationdate:  new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}};
 
         hs.customdate.should.eql('creationdate');
         hs.dategetter(report).should.equal(report.creationdate);
         hs.put(report, function (err) {
-            if (err) {
-                done(err);
-                return;
-            }
+            if (err) {return end(hs, done, err); }
 
             hs.get(function (err, reports) {
-                if (err) {
-                    done(err);
-                    return;
-                }
+                if (err) {return end(hs, done, err); }
                 reports.should.eql([report]);
-                done();
+                end(hs, done);
             });
         });
     });
 
 
     it('filters other files than json', function (done) {
-        var hs = store(storageRoot).report('MyReport'),
+        var hs = store(storageRoot).open('MyReport'),
             report = { date:  new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}};
 
         hs.put(report, function (err) {
-            if (err) {
-                done(err);
-                return;
-            }
+            if (err) {return end(hs, done, err); }
             fse.writeFileSync(path.resolve(storageRoot + '/MyReport/.DSstore'), '');
             hs.get(function (err, reports) {
-                if (err) {
-                    done(err);
-                    return;
-                }
+                if (err) {return end(hs, done, err); }
                 reports.should.eql([report]);
-                done();
+                end(hs, done);
             });
         });
     });
 
     it('callbacks with an error when getting bad json', function (done) {
-        var hs = store(storageRoot).report('MyReport'),
+        var hs = store(storageRoot).open('MyReport'),
             report = { date:  new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}};
 
         hs.put(report, function (err) {
-            if (err) {
-                done(err);
-                return;
-            }
+            if (err) {return end(hs, done, err); }
             // set bad report
             fse.writeFileSync(path.resolve(storageRoot + '/MyReport/1441566099925-938112514.json'), '{"date":"1995-12-17T03:24:00.000Z","status":}');
 
             hs.get(function (err, reports) {
                 if (err) {
                     reports.length.should.equals(0);
-                    done();
-                    return;
+                    return end(hs, done);
                 }
-                done(new Error('an error should have een thrown'));
+                end(hs, done, new Error('an error should have een thrown'));
             });
         });
     });
 
     it('callbacks with an error when getting bad json and only first report should be sent', function (done) {
-        var hs = store(storageRoot).report('MyReport'),
+        var hs = store(storageRoot).open('MyReport'),
             report = { date: new Date(), status: {sessionCount: 100, schemasCount: 10}};
 
         hs.put(report, function (err) {
-            if (err) {
-                done(err);
-                return;
-            }
+            if (err) {return end(hs, done, err); }
             // set bad report
             fse.writeFileSync(path.resolve(storageRoot + '/MyReport/' + Date.now() + 10000 + '-938112514.json'), '{"date":"1995-12-17T03:24:00.000Z","status":}');
             hs.get(function (err, reports) {
                 if (err) {
                     reports.should.eql([report]);
-                    done();
-                    return;
+                    return end(hs, done);
                 }
-                done(new Error('an error should be thrown'));
+                end(hs, done, new Error('an error should be thrown'));
             });
         });
     });
 
     it('emits an error when streaming bad json', function (done) {
-        var hs = store(storageRoot).report('MyReport'),
+        var hs = store(storageRoot).open('MyReport'),
             report = { date:  new Date(), status: {sessionCount: 100, schemasCount: 10}},
             reportCount = 0,
             errors = 0;
 
         hs.put(report, function (err) {
-            if (err) {
-                done(err);
-                return;
-            }
+            if (err) {return end(hs, done, err); }
             // set bad report
             fse.writeFileSync(path.resolve(storageRoot + '/MyReport/' + Date.now() + 10000 + '-938112514.json'), '{"date":"1995-12-17T03:24:00.000Z","status":}');
 
@@ -178,59 +149,79 @@ describe('fs history store', function () {
             stream.on('end', function () {
                 errors.should.eql(1);
                 reportCount.should.eql(1); // bad report is more recent than correct one
-                done();
+                end(hs, done);
             });
         });
     });
 
     it('writes and reads several reports', function (done) {
-        var hs = store(storageRoot).report('MyReport'),
+        var hs = store(storageRoot).open('MyReport'),
             report1 = { date: new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}},
             report2 = { date: new Date('1995-12-18T04:44:10'), status: {sessionCount: 100, schemasCount: 10}};
 
         hs.put(report1, function (err) {
-            if (err) {
-                done(err);
-                return;
-            }
+            if (err) {return end(hs, done, err); }
 
             hs.get(function (err, reports) {
-                if (err) {
-                    done(err);
-                    return;
-                }
+                if (err) {return end(hs, done, err); }
                 reports.should.eql([report1]);
 
                 // put second report
                 hs.put(report2, function (err) {
-                    if (err) {
-                        done(err);
-                        return;
-                    }
+                    if (err) {return end(hs, done, err); }
 
                     hs.get(function (err, reports) {
-                        if (err) {
-                            done(err);
-                            return;
-                        }
+                        if (err) {return end(hs, done, err); }
                         reports.should.eql([report1, report2]);
-                        done();
+                        end(hs, done);
                     });
                 });
             });
         });
     });
 
+    it('writes and reads several reports and two report stores', function (done) {
+
+        var hs = store(storageRoot).open('MyReport'),
+            hs2,
+            report1 = { date: new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}},
+            report2 = { date: new Date('1995-12-18T04:44:10'), status: {sessionCount: 100, schemasCount: 10}};
+
+        hs.put(report1, function (err) {
+            if (err) {return end(hs, done, err); }
+            hs.get(function (err, reports) {
+                if (err) {return end(hs, done, err); }
+                reports.should.eql([report1]);
+
+                // put second report from another store instance
+                hs2 = store(storageRoot).open('MyReport');
+                hs2.put(report2, function (err) {
+                    if (err) {
+                        hs2.close();
+                        return end(hs, done, err);
+                    }
+                    hs2.close();
+                    // wait for watch notification
+                    setTimeout(function read() {
+                        hs.get(function (err, reports) {
+                            if (err) {return end(hs, done, err); }
+                            reports.should.eql([report1, report2]);
+                            end(hs, done);
+                        });
+                    }, 1500);
+                });
+            });
+        });
+    });
+
+
     it('streams one report', function (done) {
-        var hs = store(storageRoot).report('MyReport'),
+        var hs = store(storageRoot).open('MyReport'),
             report = { date:  new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}},
             reportCount = 0;
 
         hs.put(report, function (err) {
-            if (err) {
-                done(err);
-                return;
-            }
+            if (err) {return end(hs, done, err); }
 
             var stream = hs.stream();
             stream.on('data', function (data) {
@@ -239,34 +230,25 @@ describe('fs history store', function () {
             });
 
             stream.on('end', function (err) {
-                if (err) {
-                    done(err);
-                    return;
-                }
+                if (err) {return end(hs, done, err); }
                 reportCount.should.equal(1);
-                done();
+                end(hs, done);
             });
         });
     });
 
     it('streams two reports', function (done) {
-        var hs = store(storageRoot).report('MyReport'),
+        var hs = store(storageRoot).open('MyReport'),
             report1 = { date: new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}},
             report2 = { date: new Date('1995-12-18T04:44:10'), status: {sessionCount: 100, schemasCount: 10}},
             reports = [report1, report2],
             reportCount = 0;
 
         hs.put(report1, function (err) {
-            if (err) {
-                done(err);
-                return;
-            }
+            if (err) {return end(hs, done, err); }
 
             hs.put(report2, function (err) {
-                if (err) {
-                    done(err);
-                    return;
-                }
+                if (err) {return end(hs, done, err); }
 
                 var stream = hs.stream();
 
@@ -276,46 +258,40 @@ describe('fs history store', function () {
                 });
 
                 stream.on('end', function (err) {
-                    if (err) {
-                        done(err);
-                        return;
-                    }
+                    if (err) {return end(hs, done, err); }
                     reportCount.should.equal(2);
-                    done();
+                    end(hs, done);
                 });
             });
         });
     });
 
     it('works when storage folder already exists', function (done) {
-        var hs = store(storageRoot).report('MyReport'),
+        var hs = store(storageRoot).open('MyReport'),
+            hs2,
             report = { date:  new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}};
 
         hs.put(report, function (err) {
-            if (err) {
-                done(err);
-                return;
-            }
+            if (err) {return end(hs, done, err); }
 
             hs.get(function (err, reports) {
-                if (err) {
-                    done(err);
-                    return;
-                }
+                if (err) {return end(hs, done, err); }
                 reports.should.eql([report]);
 
-                hs = store(storageRoot).report('MyReport'); // raised an exception
-
-                done();
+                hs2 = store(storageRoot).open('MyReport'); // raised an exception
+                hs2.close();
+                end(hs, done);
             });
         });
     });
 
     it('raises an exception when storage folder cannot be created', function (done) {
+        var hs;
         try {
-            var hs = store('/*dsdqsd/').report('MyReport');
-            done(new Error('should have raised an exception'));
+            hs = store('/*dsdqsd/').report('MyReport');
+            end(hs, done, new Error('should have raised an exception'));
         } catch (e) {
+            assert.isUndefined(hs);
             done();
         }
     });
@@ -336,12 +312,16 @@ describe('fs history store', function () {
         beforeEach(function startAndPopulateServer(done) {
             fse.removeSync(path.resolve(storageRoot));
             S = store(storageRoot);
-            hs = S.report('MyServer');
+            hs = S.open('MyServer');
             async.series(reports.map(function makePut(report) {
                 return function put(callback) {
                     hs.put(report, callback);
                 };
             }), done);
+        });
+
+        afterEach(function () {
+            hs.close();
         });
 
         it('streams expected reports with existing startdate', function (done) {
@@ -355,10 +335,7 @@ describe('fs history store', function () {
             });
 
             stream.on('end', function (err) {
-                if (err) {
-                    done(err);
-                    return;
-                }
+                if (err) {done(err); }
                 reportCount.should.equal(3);
                 done();
             });
@@ -375,10 +352,7 @@ describe('fs history store', function () {
             });
 
             stream.on('end', function (err) {
-                if (err) {
-                    done(err);
-                    return;
-                }
+                if (err) {return done(err); }
                 reportCount.should.equal(4);
                 done();
             });
@@ -396,10 +370,7 @@ describe('fs history store', function () {
             });
 
             stream.on('end', function (err) {
-                if (err) {
-                    done(err);
-                    return;
-                }
+                if (err) {return done(err); }
                 reportCount.should.equal(5);
                 done();
             });
@@ -416,10 +387,7 @@ describe('fs history store', function () {
             });
 
             stream.on('end', function (err) {
-                if (err) {
-                    done(err);
-                    return;
-                }
+                if (err) {return done(err); }
                 reportCount.should.equal(0);
                 done();
             });

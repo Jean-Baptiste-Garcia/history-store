@@ -74,18 +74,32 @@ module.exports = function (sroot) {
                 alwaysTrue;
     }
 
-    function ReportHistory(id, customdate) {
+    function ReportStore(id, customdate) {
         var dategetter = makeDateGetter(customdate),
             reportRoot,
-            store;
+            store,
+            reports,
+            dirty = true,
+            watcher;
 
+        // is dirty, when a put occurred and/or when watch raised an event
+        // if dirty, recompute reportList
+        // then look for startdate
+        // return slice of reportList
         function listreports(startdate) {
             return function (cb) {
+
+                if (!dirty) {
+                    return cb(undefined, reports.filter(sinceStardate(startdate)).map(function (filename) { return reportRoot + '/' + filename; }));
+                }
+
                 fse.readdir(reportRoot, function (err, filenames) {
-                    cb(err, err ? undefined :
-                            filenames
+                    dirty = false;
+                    reports = filenames
                             .filter(jsonOnly)
-                            .sort()
+                            .sort();
+                    cb(err, err ? undefined :
+                            reports
                             .filter(sinceStardate(startdate)) // FIXME would be much more efficient if splice on first index and with binarysearch / dichotomy
                             //.splice(dateIndex(startdate))
                             .map(function (filename) { return reportRoot + '/' + filename; }));
@@ -108,6 +122,7 @@ module.exports = function (sroot) {
             // in unit tests you can have :
             // 1441216630351-612441275.json
             // 1441216630351-613168640.json
+            dirty = true;
             fse.writeFile(reportRoot + '/' + date.getTime() + '-' + process.hrtime()[1] + '.json', JSON.stringify(report), cb);
         }
 
@@ -120,13 +135,12 @@ module.exports = function (sroot) {
             var reports = [],
                 lasterror,
                 reportstream = stream();
-            reportstream.on('data',  function acc(report) {reports.push(report); });
 
+            reportstream.on('data',  function (report) {reports.push(report); });
             reportstream.on('error', function (err) {lasterror = err; });
-
             reportstream.on('end', function () {
                 cb(lasterror, lasterror ?
-                        reports.filter(function (r) {return r; }) : // when error undefined is pushed to results :
+                        reports.filter(function (r) {return r; }) : // when error, undefined is pushed to results :
                         reports);
             });
         }
@@ -135,13 +149,15 @@ module.exports = function (sroot) {
 
         function filesystemcache(q) { return fscache(q, store); }
 
+        function close() { watcher.close(); }
+
         //
         // Initialization
         //
-
         try {
             fse.ensureDirSync(root);
             reportRoot = toPath(id);
+            watcher = fse.watch(reportRoot, function (event, filename) {dirty = true; console.log('.'); });
         } catch (error) {
             console.log('Failed to create history storage root at ' + root);
             throw error;
@@ -159,13 +175,15 @@ module.exports = function (sroot) {
             dategetter: dategetter,
             memcache: memorycache,
             cache: filesystemcache,
-            folder: reportRoot
+            folder: reportRoot,
+            close : close
         };
-
         return store;
     }
 
     return {
-        report : ReportHistory
+        open : ReportStore
     };
 };
+
+
