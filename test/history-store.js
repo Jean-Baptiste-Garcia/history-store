@@ -341,7 +341,7 @@ describe('fs history store', function () {
             });
         });
 
-        it('streams expected reports with  non existing startdate', function (done) {
+        it('streams expected reports with non existing startdate', function (done) {
             var stream = hs.stream(new Date('1995-12-17T03:25:00')),
                 reportCount = 0,
                 startIndex = 1;

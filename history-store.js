@@ -4,12 +4,11 @@ module.exports = function (sroot) {
     'use strict';
     var fse = require('fs-extra'),
         path = require('path'),
+        bs = require('binary-search'),
         Stream = require('./modules/stream/stream'),
         memcache = require('./modules/cache/memcache'),
         fscache = require('./modules/cache/fscache'),
         root = path.resolve(sroot);
-
-    function alwaysTrue() {return true; }
 
     // returns a function to access value for given a path
     // path like 'key1.key2.key3' --> obj[key1][key2][key3]
@@ -68,41 +67,39 @@ module.exports = function (sroot) {
 
     function jsonOnly(filename) {return path.extname(filename) === '.json'; }
 
-    function sinceStardate(startdate) {
-        return startdate ?
-                function (filename) {return filename.localeCompare(startdate.getTime()) >= 0; } :
-                alwaysTrue;
-    }
-
     function ReportStore(id, customdate) {
         var dategetter = makeDateGetter(customdate),
             reportRoot,
             store,
             reports,
+            dates,
             dirty = true,
             watcher;
 
-        // is dirty, when a put occurred and/or when watch raised an event
-        // if dirty, recompute reportList
-        // then look for startdate
-        // return slice of reportList
+        function dateIndex(startdate) {
+            var index;
+            if (!startdate) {return 0; }
+            index = bs(dates, startdate.getTime(), function (a, b) {return a - b; });
+            return index >= 0 ?
+                    index :
+                    -index - 1;
+        }
+
         function listreports(startdate) {
             return function (cb) {
-
                 if (!dirty) {
-                    return cb(undefined, reports.filter(sinceStardate(startdate)).map(function (filename) { return reportRoot + '/' + filename; }));
+                    return cb(undefined, reports, dateIndex(startdate));
                 }
 
                 fse.readdir(reportRoot, function (err, filenames) {
+                    if (err) { return cb(err); }
                     dirty = false;
-                    reports = filenames
-                            .filter(jsonOnly)
-                            .sort();
-                    cb(err, err ? undefined :
-                            reports
-                            .filter(sinceStardate(startdate)) // FIXME would be much more efficient if splice on first index and with binarysearch / dichotomy
-                            //.splice(dateIndex(startdate))
-                            .map(function (filename) { return reportRoot + '/' + filename; }));
+                    reports = filenames.filter(jsonOnly).sort();
+                    dates = reports.map(function todate(filename) {
+                        return parseInt(filename.split('-')[0], 10);
+                    });
+                    reports = reports.map(function (filename) { return reportRoot + '/' + filename; });
+                    cb(undefined, reports, dateIndex(startdate));
                 });
             };
         }
@@ -185,5 +182,3 @@ module.exports = function (sroot) {
         open : ReportStore
     };
 };
-
-

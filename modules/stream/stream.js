@@ -48,10 +48,11 @@ ReportStream.prototype.readReport = function () {
 ReportStream.prototype._read = function () {
     var self = this;
     if (!this.reportfiles) {
-        this.listreports(function (err, reportfiles) {
+        this.listreports(function (err, reportfiles, startIndex) {
             if (err) { return self.push(null); }
 
             self.reportfiles = reportfiles;
+            self.reportIndex = startIndex;
             self.readReport();
         });
         return;
