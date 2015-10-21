@@ -101,7 +101,7 @@ module.exports = function (sroot) {
                 if (!dirty) {return cb(undefined, catalog.reports, dateIndex(startdate)); }
 
                 buildcatalog(function (err, cat) {
-                    if (err) { return cb(err); }
+                    if (err) {return cb(err); }
                     catalog = cat;
                     dirty = false;
                     cb(undefined, catalog.reports, dateIndex(startdate));
