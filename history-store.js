@@ -65,41 +65,47 @@ module.exports = function (sroot) {
         return idpath;
     }
 
-    function jsonOnly(filename) {return path.extname(filename) === '.json'; }
-
     function ReportStore(id, customdate) {
         var dategetter = makeDateGetter(customdate),
             reportRoot,
             store,
-            reports,
-            dates,
+            catalog,
             dirty = true,
             watcher;
 
         function dateIndex(startdate) {
             var index;
             if (!startdate) {return 0; }
-            index = bs(dates, startdate.getTime(), function (a, b) {return a - b; });
+            index = bs(catalog.dates, startdate.getTime(), function (a, b) {return a - b; });
             return index >= 0 ?
                     index :
                     -index - 1;
         }
 
+        function buildcatalog(cb) {
+            function tocatalog(filenames) {
+                var reports = filenames.filter(function jsonOnly(filename) {return path.extname(filename) === '.json'; }).sort();
+                return {
+                    dates: reports.map(function todate(filename) {return parseInt(filename.split('-')[0], 10); }),
+                    reports: reports.map(function (filename) {return reportRoot + '/' + filename; })
+                };
+            }
+            fse.readdir(reportRoot, function (err, filenames) {
+                cb(err, err ?
+                        undefined :
+                        tocatalog(filenames));
+            });
+        }
+
         function listreports(startdate) {
             return function (cb) {
-                if (!dirty) {
-                    return cb(undefined, reports, dateIndex(startdate));
-                }
+                if (!dirty) {return cb(undefined, catalog.reports, dateIndex(startdate)); }
 
-                fse.readdir(reportRoot, function (err, filenames) {
+                buildcatalog(function (err, cat) {
                     if (err) { return cb(err); }
+                    catalog = cat;
                     dirty = false;
-                    reports = filenames.filter(jsonOnly).sort();
-                    dates = reports.map(function todate(filename) {
-                        return parseInt(filename.split('-')[0], 10);
-                    });
-                    reports = reports.map(function (filename) { return reportRoot + '/' + filename; });
-                    cb(undefined, reports, dateIndex(startdate));
+                    cb(undefined, catalog.reports, dateIndex(startdate));
                 });
             };
         }
