@@ -70,8 +70,7 @@ module.exports = function (sroot) {
             reportRoot,
             store,
             catalog,
-            dirty = true,
-            watcher;
+            dirty = true;
 
         function dateIndex(startdate) {
             var index;
@@ -152,15 +151,12 @@ module.exports = function (sroot) {
 
         function filesystemcache(q) { return fscache(q, store); }
 
-        function close() { watcher.close(); }
-
         //
         // Initialization
         //
         try {
             fse.ensureDirSync(root);
             reportRoot = toPath(id);
-            watcher = fse.watch(reportRoot, function (event, filename) {dirty = true; console.log('.'); });
         } catch (error) {
             console.log('Failed to create history storage root at ' + root);
             throw error;
@@ -178,13 +174,12 @@ module.exports = function (sroot) {
             dategetter: dategetter,
             memcache: memorycache,
             cache: filesystemcache,
-            folder: reportRoot,
-            close : close
+            folder: reportRoot
         };
         return store;
     }
 
     return {
-        open : ReportStore
+        report : ReportStore
     };
 };
