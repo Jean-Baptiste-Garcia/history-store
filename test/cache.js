@@ -80,8 +80,8 @@ describe('mem cached history-trend', function () {
 describe('fs cached history-trend', function () {
     describe('with anonymous query', function () {
         var hs,
-            cachefolder = storageRoot + '/MyServer/anonymous/',
-            cachefile =  cachefolder + 'trends.json';
+            cachefolder = storageRoot + '/MyServer/trends/',
+            cachefile =  cachefolder + 'anonymous.json';
 
         beforeEach(function startAndPopulateServer(done) {
             fse.removeSync(path.resolve(storageRoot));
@@ -200,8 +200,8 @@ describe('fs cached history-trend', function () {
     });
     describe('with named query', function () {
         var hs,
-            cachefolder = storageRoot + '/MyServer/myId/',
-            cachefile =  cachefolder + 'trends.json';
+            cachefolder = storageRoot + '/MyServer/trends/',
+            cachefile =  cachefolder + 'myId.json';
 
         beforeEach(function startAndPopulateServer(done) {
             fse.removeSync(path.resolve(storageRoot));

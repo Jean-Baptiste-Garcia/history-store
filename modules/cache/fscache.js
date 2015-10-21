@@ -8,10 +8,10 @@
 var fse = require('fs-extra');
 
 module.exports = function fscache(query, store) {
-    var cachedfolder = store.folder + '/' + (query.id || 'anonymous'),
+    var cachedfolder = store.folder + '/trends',
+        cachefile = cachedfolder + '/' + (query.id || 'anonymous') + '.json',
         trendslength,
-        memcache,
-        cachefile;
+        memcache;
 
     function computetrends(cb) {
 
@@ -31,7 +31,6 @@ module.exports = function fscache(query, store) {
             // Initialization
             try {
                 fse.ensureDirSync(cachedfolder);
-                cachefile = cachedfolder + '/trends.json';
             } catch (error) {
                 console.log('Failed to create query cache at ' + cachedfolder);
                 throw error;
