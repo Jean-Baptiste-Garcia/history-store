@@ -198,4 +198,47 @@ describe('fs cached history-trend', function () {
         });
 
     });
+    describe('with named query', function () {
+        var hs,
+            cachefolder = storageRoot + '/MyServer/myId/',
+            cachefile =  cachefolder + 'trends.json';
+
+        beforeEach(function startAndPopulateServer(done) {
+            fse.removeSync(path.resolve(storageRoot));
+            hs = historystore(storageRoot).report('MyServer');
+
+            var reports = [
+                    { date: new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}},
+                    { date: new Date('1995-12-18T04:44:10'), status: {sessionCount: 101, schemasCount: 5}},
+                    { date: new Date('1995-12-19T05:44:10'), status: {sessionCount: 102, schemasCount: 20}}
+                ];
+            async.series(reports.map(function makePut(report) {
+                return function put(callback) {
+                    hs.put(report, callback);
+                };
+            }), done);
+        });
+        it('writes to cache and is not changed when queried again', function (done) {
+            var q = hs.cache(H.name({id: 'myId'}).timeserie('status.sessionCount')),
+                trends1;
+
+            q.trends(function (err, trends) {
+                if (err) { return done(err); }
+                var cacheddata = fse.readFileSync(cachefile),
+                    stat = fse.statSync(cachefile);
+                //console.log(stat);
+                JSON.parseWithDate(cacheddata).should.eql([
+                    { date: new Date('1995-12-17T03:24:00'), sessionCount: 100},
+                    { date: new Date('1995-12-18T04:44:10'), sessionCount: 101},
+                    { date: new Date('1995-12-19T05:44:10'), sessionCount: 102}
+                ]);
+                q.trends(function (err2, trends2) {
+                    if (err2) { return done(err2); }
+                    fse.statSync(cachefile).should.eql(stat);
+                    done();
+                });
+            });
+        });
+    });
+
 });
