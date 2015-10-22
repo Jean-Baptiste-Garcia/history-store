@@ -66,7 +66,6 @@ describe('fs history store', function () {
         });
     });
 
-
     it('filters other files than json', function (done) {
         var hs = store(storageRoot).report('MyReport'),
             report = { date:  new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}};
@@ -175,40 +174,16 @@ describe('fs history store', function () {
         });
     });
 
-    it.skip('writes and reads several reports and two report stores', function (done) {
+    it('.report(id) is mono instance', function (done) {
 
-        var hs = store(storageRoot).report('MyReport'),
-            hs2,
-            report1 = { date: new Date('1995-12-17T03:24:00'), status: {sessionCount: 100, schemasCount: 10}},
-            report2 = { date: new Date('1995-12-18T04:44:10'), status: {sessionCount: 100, schemasCount: 10}};
-
-        hs.put(report1, function (err) {
-            if (err) {return done(err); }
-            hs.get(function (err, reports) {
-                if (err) {return done(err); }
-                reports.should.eql([report1]);
-
-                // put second report from another store instance
-                hs2 = store(storageRoot).report('MyReport');
-                hs2.put(report2, function (err) {
-                    if (err) {
-                        hs2.close();
-                        done(err);
-                    }
-                    hs2.close();
-                    // wait for watch notification
-                    setTimeout(function read() {
-                        hs.get(function (err, reports) {
-                            if (err) {return done(err); }
-                            reports.should.eql([report1, report2]);
-                            done();
-                        });
-                    }, 1500);
-                });
-            });
-        });
+        var h = store(storageRoot),
+            hs1 = h.report('MyReport'),
+            hs2 = h.report('MyReport'),
+            hsX = h.report('hello');
+        hs1.should.be.equals(hs2);
+        hs1.should.not.be.equals(hsX);
+        done();
     });
-
 
     it('streams one report', function (done) {
         var hs = store(storageRoot).report('MyReport'),
@@ -382,6 +357,6 @@ describe('fs history store', function () {
                 done();
             });
         });
-
     });
+
 });

@@ -1,4 +1,5 @@
 /*jslint node: true, nomen: true */
+var R = require('ramda');
 
 module.exports = function (sroot) {
     'use strict';
@@ -8,6 +9,7 @@ module.exports = function (sroot) {
         Stream = require('./modules/stream/stream'),
         memcache = require('./modules/cache/memcache'),
         fscache = require('./modules/cache/fscache'),
+        syncer,
         root = path.resolve(sroot);
 
     // returns a function to access value for given a path
@@ -69,7 +71,7 @@ module.exports = function (sroot) {
         var dategetter = makeDateGetter(customdate),
             reportRoot,
             store,
-            catalog,
+            catalog, // contains reports: list of filenames sorted, dates: dates in ms corresponding to reports
             dirty = true;
 
         function dateIndex(startdate) {
@@ -110,7 +112,7 @@ module.exports = function (sroot) {
         }
 
         /*
-        * Store report
+        * Stores a new report
         */
         function put(report, cb) {
             var date = dategetter(report);
@@ -128,6 +130,9 @@ module.exports = function (sroot) {
             fse.writeFile(reportRoot + '/' + date.getTime() + '-' + process.hrtime()[1] + '.json', JSON.stringify(report), cb);
         }
 
+        /*
+        * Streams reports starting at startdate
+        */
         function stream(startdate) { return new Stream(listreports(startdate)); }
 
         /*
@@ -174,12 +179,17 @@ module.exports = function (sroot) {
             dategetter: dategetter,
             memcache: memorycache,
             cache: filesystemcache,
-            folder: reportRoot
+            markdirty: function () { dirty = true; },
+            folder: reportRoot, // should be readonly
+            id: id // should be readonly
         };
         return store;
     }
 
+    syncer = require('./modules/syncer/syncer')(ReportStore, toPath);
     return {
-        report : ReportStore
+        report: R.memoize(ReportStore),
+        open: syncer.open,
+        close: syncer.close
     };
 };
