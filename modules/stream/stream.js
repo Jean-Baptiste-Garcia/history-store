@@ -34,7 +34,7 @@ ReportStream.prototype.readReport = function () {
     if (this.reportIndex >= this.reportfiles.length) {
         return this.push(null);
     }
-    reportfile = this.reportfiles[this.reportIndex];
+    reportfile = this.reportfiles[this.reportIndex].report;
     readReportFile(reportfile, function (err, report) {
         if (err) {
             self.emit('error', 'Can\'t read report ' + err);

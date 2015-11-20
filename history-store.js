@@ -74,39 +74,50 @@ module.exports = function (sroot) {
             catalog, // contains reports: list of filenames sorted, dates: dates in ms corresponding to reports
             dirty = true;
 
-        function dateIndex(startdate) {
+        function buildcatalog(cb) {
+            fse.readdir(reportRoot, function (err, filenames) {
+                cb(err, err ?
+                        undefined :
+                        filenames
+                        .filter(function jsonOnly(filename) { return path.extname(filename) === '.json'; })
+                        .sort()
+                        .map(function (filename) {
+                            return {
+                                date: parseInt(filename.split('-')[0], 10),
+                                report: reportRoot + '/' + filename
+                            };
+                        })
+                    );
+            });
+        }
+
+        // find catalog index corresponding to startdate
+        function dateIndex(cat, startdate) {
             var index;
             if (!startdate) {return 0; }
-            index = bs(catalog.dates, startdate.getTime(), function (a, b) {return a - b; });
+            index = bs(cat, startdate.getTime(), function (a, b) {return a.date - b; });
             return index >= 0 ?
                     index :
                     -index - 1;
         }
 
-        function buildcatalog(cb) {
-            function tocatalog(filenames) {
-                var reports = filenames.filter(function jsonOnly(filename) {return path.extname(filename) === '.json'; }).sort();
-                return {
-                    dates: reports.map(function todate(filename) {return parseInt(filename.split('-')[0], 10); }),
-                    reports: reports.map(function (filename) {return reportRoot + '/' + filename; })
-                };
-            }
-            fse.readdir(reportRoot, function (err, filenames) {
-                cb(err, err ?
-                        undefined :
-                        tocatalog(filenames));
-            });
-        }
-
-        function listreports(startdate) {
+        function catalogCallback(startdate, datefilter) {
             return function (cb) {
-                if (!dirty) {return cb(undefined, catalog.reports, dateIndex(startdate)); }
+
+                function sendCatalog() {
+                    var cat = datefilter ? datefilter(catalog) : catalog;
+                    cb(undefined, cat, dateIndex(cat, startdate));
+                }
+
+                if (!dirty) {
+                    return sendCatalog();
+                }
 
                 buildcatalog(function (err, cat) {
                     if (err) {return cb(err); }
                     catalog = cat;
                     dirty = false;
-                    cb(undefined, catalog.reports, dateIndex(startdate));
+                    return sendCatalog();
                 });
             };
         }
@@ -133,7 +144,7 @@ module.exports = function (sroot) {
         /*
         * Streams reports starting at startdate
         */
-        function stream(startdate) { return new Stream(listreports(startdate)); }
+        function stream(startdate, datefilter) { return new Stream(catalogCallback(startdate, datefilter)); }
 
         /*
         *  Read all reports and return them in an array

@@ -1,6 +1,6 @@
 {
     "name": "history-store",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "description": "Store history reports",
     "main": "history-store.js",
     "scripts": {
