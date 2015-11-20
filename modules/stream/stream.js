@@ -18,11 +18,11 @@ function readReportFile(filename, cb) {
     });
 }
 
-function ReportStream(listreports) {
+function ReportStream(catalogCallback) {
     Readable.call(this, {objectMode: true });
-    this.listreports = listreports;
+    this.catalogCallback = catalogCallback;
     this.reportIndex = 0; // current index of report
-    this.reportfiles = undefined;// list of reports filename
+    this.catalog = undefined;
 }
 
 util.inherits(ReportStream, Readable);
@@ -31,10 +31,10 @@ ReportStream.prototype.readReport = function () {
     var self = this,
         reportfile;
 
-    if (this.reportIndex >= this.reportfiles.length) {
+    if (this.reportIndex >= this.catalog.length) {
         return this.push(null);
     }
-    reportfile = this.reportfiles[this.reportIndex].report;
+    reportfile = this.catalog[this.reportIndex].report;
     readReportFile(reportfile, function (err, report) {
         if (err) {
             self.emit('error', 'Can\'t read report ' + err);
@@ -47,11 +47,11 @@ ReportStream.prototype.readReport = function () {
 
 ReportStream.prototype._read = function () {
     var self = this;
-    if (!this.reportfiles) {
-        this.listreports(function (err, reportfiles, startIndex) {
+    if (!this.catalog) {
+        this.catalogCallback(function (err, catalog, startIndex) {
             if (err) {return self.push(null); }
 
-            self.reportfiles = reportfiles;
+            self.catalog = catalog;
             self.reportIndex = startIndex;
             self.readReport();
         });
