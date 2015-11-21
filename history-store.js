@@ -107,6 +107,7 @@ module.exports = function (sroot) {
             return function getCatalog(cb) {
 
                 function sendCatalog() {
+
                     var cat = datefilter
                         // 1) reverse catalog for time descendant sort
                         // 2) apply datefilter
@@ -155,6 +156,10 @@ module.exports = function (sroot) {
             return new Stream(makeCatalogGetter(startdate, datefilter));
         }
 
+        function getCatalog(cb, datefilter) {
+            makeCatalogGetter(undefined, datefilter)(cb);
+        }
+
         /*
         *  Read all reports and return them in an array
         */
@@ -195,6 +200,7 @@ module.exports = function (sroot) {
             put: put,
             get: get,
             stream: stream,
+            catalog: getCatalog,
             customdate: customdate,
             dategetter: dategetter,
             memcache: memorycache,
