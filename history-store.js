@@ -105,7 +105,6 @@ module.exports = function (sroot) {
         // Catalog access is asynchroneous when dirty
         function makeCatalogGetter(startdate, transform) {
             return function getCatalog(cb) {
-
                 function sendCatalog() {
                     var cat = transform ? transform(catalog) : catalog;
                     cb(undefined, cat, dateIndex(cat, startdate));
@@ -146,8 +145,13 @@ module.exports = function (sroot) {
         /*
         * Streams reports starting at startdate
         */
-        function stream(startdate, transform) {
-            return new Stream(makeCatalogGetter(startdate, transform));
+        function stream(cb, sspec) {
+            var spec = sspec || {},
+                startdate = spec.startdate,
+                transform = spec.transform;
+            makeCatalogGetter(startdate, transform)(function (err, cat, index) {
+                cb(err, err ? undefined : new Stream(cat, index));
+            });
         }
 
         function getCatalog(cb, transform) {
@@ -159,16 +163,18 @@ module.exports = function (sroot) {
         */
         function get(cb) {
             var reports = [],
-                lasterror,
-                reportstream = stream();
-
-            reportstream.on('data',  function (report) {reports.push(report); });
-            reportstream.on('error', function (err) {lasterror = err; });
-            reportstream.on('end', function () {
-                cb(lasterror, lasterror
+                lasterror;
+            stream(function (err, reportstream) {
+                reportstream.on('data',  function (report) {reports.push(report); });
+                reportstream.on('error', function (err) {lasterror = err; });
+                reportstream.on('end', function () {
+                    cb(lasterror, lasterror
                         ? reports.filter(function (r) {return r; }) // when error, undefined is pushed to results :
                         : reports);
+                });
             });
+
+
         }
 
         function memorycache(q, initvalue) { return memcache(q, store, initvalue); }

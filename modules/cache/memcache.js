@@ -36,10 +36,6 @@ module.exports = function cache(query, store, initvalue) {
     }
 
     function appendFromDate(delta, index) {
-       // console.log('index', index);
-    //    console.log('trends', trends);
-    //    console.log('delta', delta);
-
         if (!trends) {return delta; }
         if (!delta || delta.length === 1) {return trends; }
         if (index === trends.length) { // just new data

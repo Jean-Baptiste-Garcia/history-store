@@ -129,22 +129,25 @@ describe('fs history store', function () {
             // set bad report
             fse.writeFileSync(path.resolve(storageRoot + '/MyReport/' + Date.now() + 10000 + '-938112514.json'), '{"date":"1995-12-17T03:24:00.000Z","status":}');
 
-            var stream = hs.stream();
-            stream.on('data', function (data) {
-                data.should.eql(report);
-                reportCount += 1;
+            hs.stream(function (err, stream) {
+                if (err) {return done(err); }
+                stream.on('data', function (data) {
+                    data.should.eql(report);
+                    reportCount += 1;
+                });
+
+                stream.on('error', function (err) {
+                    errors += 1;
+                    err.should.eql('Can\'t read report Error: JSON content could not be parsed');
+                });
+
+                stream.on('end', function () {
+                    errors.should.eql(1);
+                    reportCount.should.eql(1); // bad report is more recent than correct one
+                    done();
+                });
             });
 
-            stream.on('error', function (err) {
-                errors += 1;
-                err.should.eql('Can\'t read report Error: JSON content could not be parsed');
-            });
-
-            stream.on('end', function () {
-                errors.should.eql(1);
-                reportCount.should.eql(1); // bad report is more recent than correct one
-                done();
-            });
         });
     });
 
@@ -193,17 +196,20 @@ describe('fs history store', function () {
         hs.put(report, function (err) {
             if (err) {return done(err); }
 
-            var stream = hs.stream();
-            stream.on('data', function (data) {
-                data.should.eql(report);
-                reportCount += 1;
+            hs.stream(function (err, stream) {
+                if (err) {return done(err); }
+                stream.on('data', function (data) {
+                    data.should.eql(report);
+                    reportCount += 1;
+                });
+
+                stream.on('end', function (err) {
+                    if (err) {return done(err); }
+                    reportCount.should.equal(1);
+                    done();
+                });
             });
 
-            stream.on('end', function (err) {
-                if (err) {return done(err); }
-                reportCount.should.equal(1);
-                done();
-            });
         });
     });
 
@@ -220,17 +226,18 @@ describe('fs history store', function () {
             hs.put(report2, function (err) {
                 if (err) {return done(err); }
 
-                var stream = hs.stream();
-
-                stream.on('data', function (data) {
-                    data.should.eql(reports[reportCount]);
-                    reportCount += 1;
-                });
-
-                stream.on('end', function (err) {
+                hs.stream(function (err, stream) {
                     if (err) {return done(err); }
-                    reportCount.should.equal(2);
-                    done();
+                    stream.on('data', function (data) {
+                        data.should.eql(reports[reportCount]);
+                        reportCount += 1;
+                    });
+
+                    stream.on('end', function (err) {
+                        if (err) {return done(err); }
+                        reportCount.should.equal(2);
+                        done();
+                    });
                 });
             });
         });
@@ -290,72 +297,82 @@ describe('fs history store', function () {
         });
 
         it('streams expected reports with existing startdate', function (done) {
-            var stream = hs.stream(new Date('1995-12-18T04:44:10')),
-                reportCount = 0,
-                startIndex = 2;
+            hs.stream(function (err, stream) {
+                if (err) {return done(err); }
+                var reportCount = 0,
+                    startIndex = 2;
 
-            stream.on('data', function (data) {
-                data.should.eql(reports[startIndex + reportCount]);
-                reportCount += 1;
-            });
+                stream.on('data', function (data) {
+                    data.should.eql(reports[startIndex + reportCount]);
+                    reportCount += 1;
+                });
 
-            stream.on('end', function (err) {
-                if (err) {done(err); }
-                reportCount.should.equal(3);
-                done();
-            });
+                stream.on('end', function (err) {
+                    if (err) {done(err); }
+                    reportCount.should.equal(3);
+                    done();
+                });
+            }, {startdate: new Date('1995-12-18T04:44:10')});
         });
 
         it('streams expected reports with non existing startdate', function (done) {
-            var stream = hs.stream(new Date('1995-12-17T03:25:00')),
-                reportCount = 0,
-                startIndex = 1;
-
-            stream.on('data', function (data) {
-                data.should.eql(reports[startIndex + reportCount]);
-                reportCount += 1;
-            });
-
-            stream.on('end', function (err) {
+            hs.stream(function (err, stream) {
                 if (err) {return done(err); }
-                reportCount.should.equal(4);
-                done();
-            });
+                var reportCount = 0,
+                    startIndex = 1;
+
+                stream.on('data', function (data) {
+                    data.should.eql(reports[startIndex + reportCount]);
+                    reportCount += 1;
+                });
+
+                stream.on('end', function (err) {
+                    if (err) {return done(err); }
+                    reportCount.should.equal(4);
+                    done();
+                });
+            }, {startdate: new Date('1995-12-17T03:25:00')});
         });
 
 
         it('streams expected reports with startdate older than first date', function (done) {
-            var stream = hs.stream(new Date('1994-12-18T04:44:10')),
-                reportCount = 0,
-                startIndex = 0;
-
-            stream.on('data', function (data) {
-                data.should.eql(reports[startIndex + reportCount]);
-                reportCount += 1;
-            });
-
-            stream.on('end', function (err) {
+            hs.stream(function (err, stream) {
                 if (err) {return done(err); }
-                reportCount.should.equal(5);
-                done();
-            });
+                var reportCount = 0,
+                    startIndex = 0;
+
+                stream.on('data', function (data) {
+                    data.should.eql(reports[startIndex + reportCount]);
+                    reportCount += 1;
+                });
+
+                stream.on('end', function (err) {
+                    if (err) {return done(err); }
+                    reportCount.should.equal(5);
+                    done();
+                });
+            }, {startdate: new Date('1994-12-18T04:44:10')});
+
         });
 
         it('streams no reports when startdate is in future', function (done) {
-            var stream = hs.stream(new Date('1998-12-18T04:44:10')),
-                reportCount = 0,
-                startIndex = 1000;
-
-            stream.on('data', function (data) {
-                data.should.eql(reports[startIndex + reportCount]);
-                reportCount += 1;
-            });
-
-            stream.on('end', function (err) {
+            hs.stream(function (err, stream) {
                 if (err) {return done(err); }
-                reportCount.should.equal(0);
-                done();
-            });
+                var reportCount = 0,
+                    startIndex = 1000;
+
+                stream.on('data', function (data) {
+                    data.should.eql(reports[startIndex + reportCount]);
+                    reportCount += 1;
+                });
+
+                stream.on('end', function (err) {
+                    if (err) {return done(err); }
+                    reportCount.should.equal(0);
+                    done();
+                });
+            }, {startdate: new Date('1998-12-18T04:44:10')});
+
         });
     });
 
