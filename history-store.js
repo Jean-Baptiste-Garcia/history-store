@@ -92,17 +92,19 @@ module.exports = function (sroot) {
         }
 
         // find catalog index corresponding to startdate
+        // using binary search (a is array and b is target date)
         function dateIndex(cat, startdate) {
             var index;
             if (!startdate) {return 0; }
             index = bs(cat, startdate.getTime(), function (a, b) {return a.date - b; });
-            return index >= 0 ?
-                    index :
-                    -index - 1;
+            return index >= 0
+                    ? index
+                    : -index - 1;
         }
 
-        function catalogCallback(startdate, datefilter) {
-            return function (cb) {
+        // Catalog access can be asynchroneous when dirty
+        function makeCatalogGetter(startdate, datefilter) {
+            return function getCatalog(cb) {
 
                 function sendCatalog() {
                     var cat = datefilter ? datefilter(catalog) : catalog;
@@ -144,7 +146,9 @@ module.exports = function (sroot) {
         /*
         * Streams reports starting at startdate
         */
-        function stream(startdate, datefilter) { return new Stream(catalogCallback(startdate, datefilter)); }
+        function stream(startdate, datefilter) {
+            return new Stream(makeCatalogGetter(startdate, datefilter));
+        }
 
         /*
         *  Read all reports and return them in an array
@@ -157,9 +161,9 @@ module.exports = function (sroot) {
             reportstream.on('data',  function (report) {reports.push(report); });
             reportstream.on('error', function (err) {lasterror = err; });
             reportstream.on('end', function () {
-                cb(lasterror, lasterror ?
-                        reports.filter(function (r) {return r; }) : // when error, undefined is pushed to results :
-                        reports);
+                cb(lasterror, lasterror
+                        ? reports.filter(function (r) {return r; }) // when error, undefined is pushed to results :
+                        : reports);
             });
         }
 
