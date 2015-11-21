@@ -102,7 +102,7 @@ module.exports = function (sroot) {
                     : -index - 1;
         }
 
-        // Catalog access can be asynchroneous when dirty
+        // Catalog access is asynchroneous when dirty
         function makeCatalogGetter(startdate, transform) {
             return function getCatalog(cb) {
 
@@ -146,12 +146,12 @@ module.exports = function (sroot) {
         /*
         * Streams reports starting at startdate
         */
-        function stream(startdate, datefilter) {
-            return new Stream(makeCatalogGetter(startdate, datefilter));
+        function stream(startdate, transform) {
+            return new Stream(makeCatalogGetter(startdate, transform));
         }
 
-        function getCatalog(cb, datefilter) {
-            makeCatalogGetter(undefined, datefilter)(cb);
+        function getCatalog(cb, transform) {
+            makeCatalogGetter(undefined, transform)(cb);
         }
 
         /*
