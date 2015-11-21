@@ -107,7 +107,12 @@ module.exports = function (sroot) {
             return function getCatalog(cb) {
 
                 function sendCatalog() {
-                    var cat = datefilter ? datefilter(catalog) : catalog;
+                    var cat = datefilter
+                        // 1) reverse catalog for time descendant sort
+                        // 2) apply datefilter
+                        // 3) reverse to come back to ascendant sort
+                        ? datefilter(R.reverse(catalog)).reverse()
+                        : catalog;
                     cb(undefined, cat, dateIndex(cat, startdate));
                 }
 

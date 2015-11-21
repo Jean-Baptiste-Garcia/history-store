@@ -24,7 +24,6 @@ function ReportStream(getCatalog) {
     this.reportIndex = -1; // current index of report
     this.catalog = undefined;
     this.getCatalog = getCatalog;
-
 }
 
 util.inherits(ReportStream, Readable);
