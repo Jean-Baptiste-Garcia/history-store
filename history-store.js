@@ -76,9 +76,9 @@ module.exports = function (sroot) {
 
         function buildcatalog(cb) {
             fse.readdir(reportRoot, function (err, filenames) {
-                cb(err, err ?
-                        undefined :
-                        filenames
+                cb(err, err
+                        ? undefined
+                        : filenames
                         .filter(function jsonOnly(filename) { return path.extname(filename) === '.json'; })
                         .sort()
                         .map(function (filename) {
@@ -102,25 +102,29 @@ module.exports = function (sroot) {
                     : -index - 1;
         }
 
-        // Catalog access is asynchroneous when dirty
-        function makeCatalogGetter(startdate, transform) {
-            return function getCatalog(cb) {
-                function sendCatalog() {
-                    var cat = transform ? transform(catalog) : catalog;
-                    cb(undefined, cat, dateIndex(cat, startdate));
-                }
+        /*
+        * return catalog reports corresponding to :
+        *   startdate : date to start streaming
+        *   transform : transformation to apply to catalog (e.g. date filtering)
+        */
+        // Catalog access is asynchronous when dirty
+        function getCatalog(cb, sspec) {
+            var spec = sspec || {};
+            function sendCatalog() {
+                var cat = spec.transform ? spec.transform(catalog) : catalog;
+                cb(undefined, cat, dateIndex(cat, spec.startdate));
+            }
 
-                if (!dirty) {
-                    return sendCatalog();
-                }
+            if (!dirty) {
+                return sendCatalog();
+            }
 
-                buildcatalog(function (err, cat) {
-                    if (err) {return cb(err); }
-                    catalog = cat;
-                    dirty = false;
-                    return sendCatalog();
-                });
-            };
+            buildcatalog(function (err, cat) {
+                if (err) {return cb(err); }
+                catalog = cat;
+                dirty = false;
+                return sendCatalog();
+            });
         }
 
         /*
@@ -143,19 +147,16 @@ module.exports = function (sroot) {
         }
 
         /*
-        * Streams reports starting at startdate
+        * Streams reports corresponding to :
+        *   startdate : date to start streaming
+        *   transform : transformation to apply to catalog (e.g. date filtering)
         */
-        function stream(cb, sspec) {
-            var spec = sspec || {},
-                startdate = spec.startdate,
-                transform = spec.transform;
-            makeCatalogGetter(startdate, transform)(function (err, cat, index) {
-                cb(err, err ? undefined : new Stream(cat, index));
-            });
-        }
-
-        function getCatalog(cb, transform) {
-            makeCatalogGetter(undefined, transform)(cb);
+        function stream(cb, spec) {
+            getCatalog(function (err, cat, index) {
+                cb(err, err
+                        ? undefined
+                        : new Stream(cat, index));
+            }, spec);
         }
 
         /*
@@ -173,8 +174,6 @@ module.exports = function (sroot) {
                         : reports);
                 });
             });
-
-
         }
 
         function memorycache(q, initvalue) { return memcache(q, store, initvalue); }

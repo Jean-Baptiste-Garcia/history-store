@@ -19,7 +19,6 @@ function readReportFile(filename, cb) {
 }
 
 function ReportStream(catalog, fromIndex) {
-    var self = this;
     Readable.call(this, {objectMode: true });
     this.reportIndex = fromIndex;
     this.catalog = catalog;
@@ -27,7 +26,7 @@ function ReportStream(catalog, fromIndex) {
 
 util.inherits(ReportStream, Readable);
 
-ReportStream.prototype.readReport = function () {
+ReportStream.prototype._read = function () {
     var self = this,
         reportfile;
 
@@ -43,10 +42,6 @@ ReportStream.prototype.readReport = function () {
         self.reportIndex += 1;
         self.push(report);
     });
-};
-
-ReportStream.prototype._read = function () {
-    this.readReport();
 };
 
 module.exports = ReportStream;
