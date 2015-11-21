@@ -103,17 +103,11 @@ module.exports = function (sroot) {
         }
 
         // Catalog access can be asynchroneous when dirty
-        function makeCatalogGetter(startdate, datefilter) {
+        function makeCatalogGetter(startdate, transform) {
             return function getCatalog(cb) {
 
                 function sendCatalog() {
-
-                    var cat = datefilter
-                        // 1) reverse catalog for time descendant sort
-                        // 2) apply datefilter
-                        // 3) reverse to come back to ascendant sort
-                        ? datefilter(R.reverse(catalog)).reverse()
-                        : catalog;
+                    var cat = transform ? transform(catalog) : catalog;
                     cb(undefined, cat, dateIndex(cat, startdate));
                 }
 
