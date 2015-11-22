@@ -11,16 +11,22 @@ module.exports = function fscache(query, store) {
     var cachedfolder = store.folder + '/trends',
         cachefile = cachedfolder + '/' + (query.id || 'anonymous') + '.json',
         trendslength,
+        lastdate,
         memcache;
 
     function computetrends(cb) {
 
         function memcachecb(err, trends) {
             if (err) {return cb(err); }
-            if (trends.length !== trendslength) {
+            var newLastdate = trends[trends.length - 1].date;
+            //console.log(newLastdate, typeof newLastdate);
+            if (trends.length !== trendslength || newLastdate.getTime() !== lastdate.getTime()) {
                 // cache file needs to be updated
                 return fse.writeFile(cachefile, JSON.stringify(trends), function (err) {
-                    if (!err) {trendslength = trends.length; }
+                    if (!err) {
+                        trendslength = trends.length;
+                        lastdate = newLastdate;
+                    }
                     cb(undefined, trends);
                 });
             }
@@ -40,6 +46,7 @@ module.exports = function fscache(query, store) {
                 try {
                     var initvalue = data ? JSON.parseWithDate(data) : undefined;
                     trendslength = initvalue ? initvalue.length : 0;
+                    lastdate = initvalue ? initvalue[initvalue.length - 1].date : undefined;
                     memcache = store.memcache(query, initvalue);
                     memcache.trends(memcachecb);
                 } catch (e) {
