@@ -50,10 +50,10 @@ module.exports = function cache(query, store, initvalue) {
             var change = changeDate(catalog);
 
             function cachecb(err, delta) {
+                var oldtrends = trends;
                 trends = appendFromDate(delta, change.index);
-                cb(err, trends);
+                cb(err, trends, oldtrends !== trends);
             }
-
             query.fromStore(store, cachecb, change.recomputeDate);
         }
 
