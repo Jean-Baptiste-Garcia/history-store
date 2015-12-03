@@ -99,10 +99,6 @@ describe('fs cached history-trend', function () {
             }), done);
         });
 
-        // with empty cache and put then read that cache is correctly updated
-        // populate cache and check that results start with cached value
-
-
         it('writes to cache and is not changed when queried again', function (done) {
             var q = hs.cache(H.timeserie('status.sessionCount')),
                 trends1;
@@ -197,7 +193,69 @@ describe('fs cached history-trend', function () {
             });
         });
 
+        it('put data, loads from cache, put data, read, read', function (done) {
+            var q = hs.cache(H.timeserie('status.sessionCount')),
+                stat1;
+
+            fse.ensureDirSync(cachefolder);
+            // data in cache is different from reports store
+            // so it is possible to check that return trends comes from cache and not from store.
+            fse.writeFileSync(cachefile, JSON.stringify([
+                { date: new Date('1995-12-17T03:24:00'), sessionCount: 200},
+                { date: new Date('1995-12-18T04:44:10'), sessionCount: 201},
+                { date: new Date('1995-12-19T05:44:10'), sessionCount: 202}
+            ]));
+            stat1 = fse.statSync(cachefile);
+
+
+            hs.put({date: new Date('1995-12-20T03:44:10'), status: {sessionCount: 110, schemasCount: 20}}, function (err) {
+                if (err) { return done(err); }
+                q.trends(function (err, trends) {
+                    if (err) { return done(err); }
+                    fse.statSync(cachefile).should.not.eql(stat1);
+                    trends.should.eql([
+                        { date: new Date('1995-12-17T03:24:00'), sessionCount: 200},
+                        { date: new Date('1995-12-18T04:44:10'), sessionCount: 201},
+                        { date: new Date('1995-12-19T05:44:10'), sessionCount: 202},
+                        { date: new Date('1995-12-20T03:44:10'), sessionCount: 110}
+                    ]);
+                    hs.put({date: new Date('1995-12-20T05:44:10'), status: {sessionCount: 130, schemasCount: 20}}, function (err) {
+                        if (err) {return done(err); }
+                        q.trends(function (err2, trends2) {
+                            var stat2;
+                            if (err2) { return done(err2); }
+                            trends2.should.eql([
+                                {date: new Date('1995-12-17T03:24:00'), sessionCount: 200},
+                                {date: new Date('1995-12-18T04:44:10'), sessionCount: 201},
+                                {date: new Date('1995-12-19T05:44:10'), sessionCount: 202},
+                                {date: new Date('1995-12-20T03:44:10'), sessionCount: 110},
+                                {date: new Date('1995-12-20T05:44:10'), sessionCount: 130}
+                            ]);
+                            stat2 = fse.statSync(cachefile);
+                            stat2.should.not.eql(stat1);
+
+                            q.trends(function (err3, trends3) {
+                                if (err3) { return done(err3); }
+                                trends3.should.eql([
+                                    {date: new Date('1995-12-17T03:24:00'), sessionCount: 200},
+                                    {date: new Date('1995-12-18T04:44:10'), sessionCount: 201},
+                                    {date: new Date('1995-12-19T05:44:10'), sessionCount: 202},
+                                    {date: new Date('1995-12-20T03:44:10'), sessionCount: 110},
+                                    {date: new Date('1995-12-20T05:44:10'), sessionCount: 130}
+                                ]);
+                                fse.statSync(cachefile).should.eql(stat2);
+                                done();
+                            });
+                        });
+                    });
+                });
+            });
+        });
+
     });
+
+
+
     describe('with named query', function () {
         var hs,
             cachefolder = storageRoot + '/MyServer/trends/',
