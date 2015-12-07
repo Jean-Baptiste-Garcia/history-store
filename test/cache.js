@@ -9,7 +9,8 @@ var should = require('chai').should(),
     R = require('ramda'),
     historystore = require('../../history-store'),
     storageRoot = '../tmp-history-store',
-    H = require('../../history-trend');
+    H = require('../../history-trend'),
+    W = require('../../history-when')();
 
 describe('mem cached history-trend', function () {
     describe('with default store', function () {
@@ -290,8 +291,8 @@ describe('fs cached history-trend', function () {
 
 
         it('dont crash when 2 stores : store1.put, store1.trends, storeB.put, storeB.trends', function (done) {
-            var qA = hsA.cache(H.timeserie('status.sessionCount')),
-                qB =  hsB.cache(H.timeserie('status.sessionCount')),
+            var qA = hsA.cache(H.timeserie('status.sessionCount').whereDate(W.daily)),
+                qB = hsB.cache(H.timeserie('status.sessionCount').whereDate(W.daily)),
                 statA,
                 statB;
             fse.ensureDirSync(cachefolderA);
@@ -309,7 +310,6 @@ describe('fs cached history-trend', function () {
                 { date: new Date('1995-12-15T05:44:20'), sessionCount: 402}
             ]));
             statB = fse.statSync(cachefileB);
-
 
             hsA.put({date: new Date('1995-12-20T03:44:10'), status: {sessionCount: 110, schemasCount: 20}}, function (err) {
                 if (err) { return done(err); }
