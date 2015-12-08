@@ -7,27 +7,26 @@
 module.exports = function cache(query, store, initvalue) {
     var trends = initvalue;
 
-    function changeDate(catalog) {
-
-        function diffIndex() {
-            var index;
-            // NOTE : try to loop from last date (should be more efficient)
-            for (index = 0; index < trends.length; index += 1) {
-                if (catalog[index].date !== store.dategetter(trends[index]).getTime()) {
-                    //console.log('here', index);
-                    return index;
-                }
+    function diffIndex(catalog) {
+        var index;
+        // NOTE : try to loop from last date (should be more efficient)
+        for (index = 0; index < trends.length; index += 1) {
+            if (catalog[index].date !== store.dategetter(trends[index]).getTime()) {
+                //console.log('here', index);
+                return index;
             }
-            return index;
         }
+        return index;
+    }
 
+    function changeDate(catalog) {
         if (!trends) {
             return {
                 index: 0,
                 date : undefined
             };
         }
-        var index = diffIndex();
+        var index = diffIndex(catalog);
 
         return {
             index: index,
@@ -47,9 +46,11 @@ module.exports = function cache(query, store, initvalue) {
     function computetrends(cb) {
 
         function catalogCb(err, catalog) {
+            if (err) {return cb(err); }
             var change = changeDate(catalog);
 
             function cachecb(err, delta) {
+                if (err) {return cb(err); }
                 var oldtrends = trends;
                 trends = appendFromDate(delta, change.index);
                 cb(err, trends, oldtrends !== trends);

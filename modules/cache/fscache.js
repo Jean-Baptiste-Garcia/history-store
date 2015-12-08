@@ -18,33 +18,47 @@ module.exports = function fscache(query, store) {
             if (err) {return cb(err); }
             if (changed) {
                 return fse.writeFile(cachefile, JSON.stringify(trends), function (err) {
+                    if (err) {
+                        console.error('ERROR : failed to write trends cache file at', cachefile, err);
+                    }
+                    // failing to write to cache should not prevent to get trends
                     cb(undefined, trends);
                 });
             }
             cb(err, trends);
         }
 
-        if (memcache) {
-            return memcache.trends(memcachecb);
+        function initcache(next) {
+
+            fse.readFile(cachefile, function (err, data) {
+                if (err && err.code !== 'ENOENT') {
+                    console.error('ERROR: failed to read cache file at', cachefile, err);
+                }
+                try {
+                    var filecontent = err ? undefined : data,
+                        initvalue = filecontent ? JSON.parseWithDate(filecontent) : undefined;
+                    memcache = store.memcache(query, initvalue);
+                    next();
+                } catch (e) {
+                    console.log('fscache failure ', e);
+                    cb(e);
+                }
+            });
         }
 
-        // Initialization
-        try {
-            fse.ensureDirSync(cachedfolder);
-        } catch (error) {
-            console.log('Failed to create query cache at ' + cachedfolder);
-            throw error;
+        if (memcache) {
+            memcache.trends(memcachecb);
+        } else {
+            initcache(function () {memcache.trends(memcachecb); });
         }
-        // read cache file
-        fse.readFile(cachefile, function (err, data) {
-            try {
-                var initvalue = data ? JSON.parseWithDate(data) : undefined;
-                memcache = store.memcache(query, initvalue);
-                memcache.trends(memcachecb);
-            } catch (e) {
-                cb(e);
-            }
-        });
+    }
+
+    // Initialization
+    try {
+        fse.ensureDirSync(cachedfolder);
+    } catch (error) {
+        console.log('Failed to create query cache at ' + cachedfolder);
+        throw error;
     }
 
     return {

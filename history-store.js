@@ -76,18 +76,17 @@ module.exports = function (sroot) {
 
         function buildcatalog(cb) {
             fse.readdir(reportRoot, function (err, filenames) {
-                cb(err, err
-                        ? undefined
-                        : filenames
-                        .filter(function jsonOnly(filename) { return path.extname(filename) === '.json'; })
-                        .sort()
-                        .map(function (filename) {
-                            return {
-                                date: parseInt(filename.split('-')[0], 10),
-                                report: reportRoot + '/' + filename
-                            };
-                        })
-                    );
+                if (err) { return cb(err); }
+                cb(undefined,
+                    filenames
+                    .filter(function jsonOnly(filename) { return path.extname(filename) === '.json'; })
+                    .sort()
+                    .map(function (filename) {
+                        return {
+                            date: parseInt(filename.split('-')[0], 10),
+                            report: reportRoot + '/' + filename
+                        };
+                    }));
             });
         }
 
@@ -166,6 +165,7 @@ module.exports = function (sroot) {
             var reports = [],
                 lasterror;
             stream(function (err, reportstream) {
+                if (err) { return cb(err); }
                 reportstream.on('data',  function (report) {reports.push(report); });
                 reportstream.on('error', function (err) {lasterror = err; });
                 reportstream.on('end', function () {
